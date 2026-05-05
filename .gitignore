@@ -46,6 +46,6 @@
 *.suo
 
 # juce
-sonic_synth_juce/Builds/
-sonic_synth_juce/JuceLibraryCode/
+sonic-synth-juce/Builds/
+sonic-synth-juce/JuceLibraryCode/
 
