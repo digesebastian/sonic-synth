@@ -39,3 +39,13 @@
 
 # debug information files
 *.dwo
+
+# visual studio
+.vs/
+*.user
+*.suo
+
+# juce
+sonic_synth_juce/Builds/
+sonic_synth_juce/JuceLibraryCode/
+
