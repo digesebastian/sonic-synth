@@ -22,6 +22,8 @@ SonicsynthjuceAudioProcessor::SonicsynthjuceAudioProcessor()
                        )
 #endif
 {
+    sender.connect("127.0.0.1", 57120);
+    
 }
 
 SonicsynthjuceAudioProcessor::~SonicsynthjuceAudioProcessor()
@@ -156,6 +158,7 @@ void SonicsynthjuceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
         // ..do something to the data...
     }
+    sender.send ("/juce/test", 440.0f);
 }
 
 //==============================================================================

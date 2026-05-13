@@ -16,6 +16,7 @@
 class SonicsynthjuceAudioProcessor  : public juce::AudioProcessor
 {
 public:
+    // This is all default boilerplate code
     //==============================================================================
     SonicsynthjuceAudioProcessor();
     ~SonicsynthjuceAudioProcessor() override;
@@ -52,8 +53,12 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    // end of boilerplater
+   
 
 private:
-    //==============================================================================
+    // OSC sender instance.
+    juce::OSCSender sender;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SonicsynthjuceAudioProcessor)
 };
