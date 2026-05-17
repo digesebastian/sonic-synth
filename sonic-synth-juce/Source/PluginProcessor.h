@@ -13,7 +13,8 @@
 //==============================================================================
 /**
 */
-class SonicsynthjuceAudioProcessor  : public juce::AudioProcessor
+class SonicsynthjuceAudioProcessor  : public juce::AudioProcessor,
+    public juce::OSCReceiver::Listener<juce::OSCReceiver::RealtimeCallback>
 {
 public:
     // This is all default boilerplate code
@@ -54,11 +55,13 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
     // end of boilerplater
-   
 
-private:
+    void oscMessageReceived(const juce::OSCMessage& message) override;
+
+private:    
     // OSC sender instance.
-    juce::OSCSender sender;
+    juce::OSCSender oscSender;
+    juce::OSCReceiver oscReceiver;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SonicsynthjuceAudioProcessor)
 };

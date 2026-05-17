@@ -22,12 +22,23 @@ SonicsynthjuceAudioProcessor::SonicsynthjuceAudioProcessor()
                        )
 #endif
 {
-    sender.connect("127.0.0.1", 57120);
-    
+    oscSender.connect("127.0.0.1", 57120);
+    if (!oscReceiver.connect(7000))
+    {
+        // Handle error if the port is already in use
+        juce::Logger::writeToLog("Error: Could not connect to UDP port 7000");
+    }
+    oscReceiver.addListener(this);
+    juce::Logger::writeToLog("connected probably?");
 }
 
 SonicsynthjuceAudioProcessor::~SonicsynthjuceAudioProcessor()
 {
+    oscReceiver.removeListener(this);
+
+    oscReceiver.disconnect();
+
+    juce::Logger::writeToLog("disconnected");
 }
 
 //==============================================================================
@@ -158,7 +169,6 @@ void SonicsynthjuceAudioProcessor::processBlock (juce::AudioBuffer<float>& buffe
 
         // ..do something to the data...
     }
-    sender.send ("/juce/test", 440.0f);
 }
 
 //==============================================================================
@@ -184,6 +194,22 @@ void SonicsynthjuceAudioProcessor::setStateInformation (const void* data, int si
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+}
+
+void SonicsynthjuceAudioProcessor::oscMessageReceived(const juce::OSCMessage& message)
+{
+
+    juce::Logger::writeToLog("message");
+	if (message.getAddressPattern() == "/test")
+	{
+		if (message.size() == 1 && message[0].isFloat32())
+		{
+			float value = message[0].getFloat32();
+			juce::Logger::writeToLog("Received OSC message with value: " + juce::String(value));
+
+            oscSender.send("/juce/test", juce::String(value));
+		}
+	}
 }
 
 //==============================================================================
