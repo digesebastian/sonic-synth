@@ -198,13 +198,13 @@ void SonicsynthjuceAudioProcessor::setStateInformation (const void* data, int si
 
 void SonicsynthjuceAudioProcessor::oscMessageReceived(const juce::OSCMessage& message)
 {
-
-    juce::Logger::writeToLog("message");
 	if (message.getAddressPattern() == "/test")
 	{
-		if (message.size() == 1 && message[0].isFloat32())
+        juce::Logger::writeToLog("Received OSC message");
+        juce::Logger::writeToLog(juce::String(message.size()));
+		if (message.size() == 2 && message[0].isInt32())
 		{
-			float value = message[0].getFloat32();
+			float value = message[0].getInt32();
 			juce::Logger::writeToLog("Received OSC message with value: " + juce::String(value));
 
             oscSender.send("/juce/test", juce::String(value));
