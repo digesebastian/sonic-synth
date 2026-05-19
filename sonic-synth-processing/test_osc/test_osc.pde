@@ -61,13 +61,14 @@ void draw() {
 
 void mousePressed() {
   if (buttonOver) {
-     OscMessage myMessage = new OscMessage("/test");
+     OscMessage message = new OscMessage("/test");
      
-     myMessage.add(sonarAngle);
-     myMessage.add(sonarDistance);
+     message.add(sonarAngle);
+     message.add(sonarDistance);
      
-     oscP5.send(myMessage, myRemoteLocation); // Send it!
-     System.out.println("sent message");
+     oscP5.send(message, myRemoteLocation); // Send it!
+     System.out.println("sent message:");
+     message.print();
   }
 }
 
@@ -95,8 +96,6 @@ void distance(String newDistance) {
    } catch (NumberFormatException e) {
      sonarDistance = 0; 
    }
-   
-   System.out.println(sonarDistance);
 }
 
 boolean overButton(int x, int y, int diameter) {

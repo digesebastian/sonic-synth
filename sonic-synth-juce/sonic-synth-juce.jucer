@@ -4,6 +4,7 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth">
   <MAINGROUP id="xtNc9y" name="sonic-synth-juce">
     <GROUP id="{1E687FE8-BFB7-4B67-2C0A-C53D2BFC046C}" name="Source">
+      <FILE id="iVIEW5" name="Logging.h" compile="0" resource="0" file="Source/Logging.h"/>
       <FILE id="cxJCdu" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="f8OJUN" name="PluginProcessor.h" compile="0" resource="0"
