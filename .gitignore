@@ -48,4 +48,6 @@
 # juce
 sonic-synth-juce/Builds/
 sonic-synth-juce/JuceLibraryCode/
+sonic-synth-juce-gui/Builds/
+sonic-synth-juce-gui/JuceLibraryCode/
 
