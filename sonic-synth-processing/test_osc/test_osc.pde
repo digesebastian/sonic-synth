@@ -61,7 +61,7 @@ void draw() {
 
 void mousePressed() {
   if (buttonOver) {
-     OscMessage message = new OscMessage("/test");
+     OscMessage message = new OscMessage("/sonar");
      
      message.add(sonarAngle);
      message.add(sonarDistance);

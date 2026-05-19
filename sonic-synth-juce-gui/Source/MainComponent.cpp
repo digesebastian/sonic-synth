@@ -26,16 +26,24 @@ MainComponent::~MainComponent()
 
 void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 {
-	LOG_INFO("Received OSC message");
-	if (message.getAddressPattern() == "/test")
+	if (message.getAddressPattern() == "/sonar")
 	{
-
-		if (message.size() == 2 && message[0].isInt32())
+		if (message.size() == 2)
 		{
-			float value = message[0].getInt32();
-			LOG_INFO("Received OSC message with value: " + juce::String(value));
+			int value1 = message[0].getInt32();
+			LOG_INFO("Received OSC message with value: " + juce::String(value1));
 
-			oscSender.send("/juce/test", juce::String(value));
+			int value2 = message[1].getInt32();
+			LOG_INFO("Received OSC message with value: " + juce::String(value2));
+
+			juce::OSCMessage messageToSend ("/juce/sonar");
+			messageToSend.addArgument(value1);
+			messageToSend.addArgument(value2);
+
+			oscSender.send(messageToSend);
+		}
+		else {
+			LOG_WARN("Received an unexpected number of arguments: " + message.size());
 		}
 	}
 	else {
