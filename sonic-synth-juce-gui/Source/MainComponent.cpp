@@ -31,14 +31,38 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 		if (message.size() == 2)
 		{
 			int value1 = message[0].getInt32();
-			LOG_INFO("Received OSC message with value: " + juce::String(value1));
+			LOG_INFO("Received OSC message with angle: " + juce::String(value1));
 
 			int value2 = message[1].getInt32();
-			LOG_INFO("Received OSC message with value: " + juce::String(value2));
+			LOG_INFO("And distance: " + juce::String(value2));
 
-			juce::OSCMessage messageToSend ("/juce/sonar");
+			juce::OSCMessage messageToSend("/juce/triggerNote");
+			messageToSend.addArgument(juce::String("freq"));
 			messageToSend.addArgument(value1);
-			messageToSend.addArgument(value2);
+
+			messageToSend.addArgument(juce::String("atk"));
+			messageToSend.addArgument(4);
+
+			messageToSend.addArgument(juce::String("sus"));
+			messageToSend.addArgument(40);
+
+			messageToSend.addArgument(juce::String("rel"));
+			messageToSend.addArgument(6);
+
+			oscSender.send(messageToSend);
+		}
+		else {
+			LOG_WARN("Received an unexpected number of arguments: " + message.size());
+		}
+	}
+	else if (message.getAddressPattern() == "/instrumentSlider") {
+		if (message.size() == 1)
+		{
+			float sliderValue = message[0].getFloat32();
+			LOG_INFO("Received slider OSC message with value: " + juce::String(sliderValue));
+
+			juce::OSCMessage messageToSend("/juce/slider");
+			messageToSend.addArgument(sliderValue);
 
 			oscSender.send(messageToSend);
 		}
