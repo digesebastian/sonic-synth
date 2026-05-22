@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "SoundSourceDetector.h"
 
 //==============================================================================
 /*
@@ -27,6 +28,9 @@ private:
     
     // OSC receiver instance.
     juce::OSCReceiver oscReceiver;
+    
+    // Sound source detector instance
+    SoundSourceDetector detector;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

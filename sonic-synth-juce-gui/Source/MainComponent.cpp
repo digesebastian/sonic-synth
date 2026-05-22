@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 #include "Logging.h"
+#include "SoundSource.h"
 
 //==============================================================================
 MainComponent::MainComponent()
@@ -30,15 +31,16 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 	{
 		if (message.size() == 2)
 		{
-			int value1 = message[0].getInt32();
-			LOG_INFO("Received OSC message with angle: " + juce::String(value1));
-
-			int value2 = message[1].getInt32();
-			LOG_INFO("And distance: " + juce::String(value2));
+			std::optional<SoundSource> potentialSource = detector.checkForNewSource(message[0].getInt32(), message[1].getInt32());
+			if (!potentialSource.has_value())
+			{
+				return; // no new sound source detected, so we can exit early
+			}
+			SoundSource newSource = potentialSource.value();
 
 			juce::OSCMessage messageToSend("/juce/triggerNote");
 			messageToSend.addArgument(juce::String("freq"));
-			messageToSend.addArgument(value1);
+			messageToSend.addArgument(newSource.freq);
 
 			messageToSend.addArgument(juce::String("atk"));
 			messageToSend.addArgument(4);
