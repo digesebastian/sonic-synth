@@ -28,7 +28,7 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 			LOG_INFO("New sound source detected at angle: " + juce::String(angle) + " and distance: " + juce::String(distance));
 			currentlyScanningSource = true;
 			SoundSource newSource;
-			newSource.freq = angle;
+			newSource.freq = computeFreq(angle);
 
 			return newSource;
 		}
@@ -43,4 +43,16 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 	}
     
 	return std::nullopt;
+}
+
+int SoundSourceDetector::computeFreq(const int& angle)
+{
+	int semitone = (angle * 12) / defaultValues::maxAngle;
+	if (semitone > 12)
+	{
+		semitone = 12;
+	}
+	int freq = defaultValues::minFreq * std::pow(2.0, semitone / 12.0);
+
+	return freq;
 }

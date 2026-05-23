@@ -15,20 +15,18 @@ MainComponent::MainComponent()
 	}
 	oscReceiver.addListener(this);
 
-
 	// logging window setup
 	logWindow.setMultiLine(true);
 	logWindow.setReturnKeyStartsNewLine(true);
 	logWindow.setReadOnly(true);
 	logWindow.setScrollbarsShown(true);
 	logWindow.setCaretVisible(false);
-
 	addAndMakeVisible(logWindow);
 
 	// Set this component as the current global logger
 	juce::Logger::setCurrentLogger(this);
 
-	// Test logs to verify it works instantly
+	// write initial log message
 	juce::Logger::writeToLog("--- Logging messages ---");
 }
 
@@ -55,19 +53,11 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 				return; // no new sound source detected, so we can exit early
 			}
 			SoundSource newSource = potentialSource.value();
+			int newFreq = newSource.freq;
 
 			juce::OSCMessage messageToSend("/juce/triggerNote");
 			messageToSend.addArgument(juce::String("freq"));
-			messageToSend.addArgument(newSource.freq);
-
-			messageToSend.addArgument(juce::String("atk"));
-			messageToSend.addArgument(4);
-
-			messageToSend.addArgument(juce::String("sus"));
-			messageToSend.addArgument(40);
-
-			messageToSend.addArgument(juce::String("rel"));
-			messageToSend.addArgument(6);
+			messageToSend.addArgument(newFreq);
 
 			oscSender.send(messageToSend);
 		}
