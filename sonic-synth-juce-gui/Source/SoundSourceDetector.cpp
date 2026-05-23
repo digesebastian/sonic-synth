@@ -33,7 +33,7 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 			return newSource;
 		}
 		else {
-			LOG_INFO("Detected same sound source as before");
+			//LOG_INFO("Detected same sound source as before");
 		}
 	}
 	else
