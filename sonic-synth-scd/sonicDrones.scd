@@ -51,13 +51,75 @@ SynthDef.new(\juceDrone, {
 
     Out.ar(out, snd);
 }).add;
+
+//BELL AND REVERB SYNTHDEFS
+SynthDef(\fm_2, {
+	arg freq=220, mRatio=9, cRatio=1, index=1, iScale=5,
+	amp=0.2, atk=0.01, rel=0.7, cAtk=5, cRel=(-4), pan=0, out=0, detune=1.5, spread=0.8;
+
+	var car, mod, env, iEnv, detunedVoices;
+
+	//modulation index
+	iEnv = EnvGen.kr(
+		Env(
+			[index, index*iScale, index],
+			[atk, rel],
+			[cAtk, cRel]
+		)
+	);
+
+	//amplitude envelope
+	env = EnvGen.kr(Env.perc(atk, rel,curve:[cAtk, cRel]), doneAction:2);
+	detunedVoices = [-2, -1, 0, 1, 2] * detune; //initialize 5 voice unison detune
+
+	//modulator carrier
+	mod = SinOsc.ar(freq * mRatio, mul:freq * mRatio * iEnv);
+	car = SinOsc.ar(freq * cRatio + detunedVoices + mod);
+
+	car = Splay.ar(car, spread: spread, center: pan, levelComp: true); //spread voices across stereo field
+	car = car * env * amp;
+
+	//car = Pan2.ar(car, pan);
+
+	//direct outd
+	Out.ar(out, car);
+	//Out.ar(fx, car * fxsend.dbamp); //for reverb send if needed
+
+}).add;
+
+//suggested reverb parameters to change: t60 (decay time), size
+SynthDef(\jp_reverb, {
+	arg in, t60=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, mix=0.5;
+	var snd, dry, wet;
+
+	snd = In.ar(in, 2);
+	dry = snd;
+
+	wet = JPverb.ar(
+		snd.sum,
+		t60: t60,
+		size: roomsize,
+		damp: damp,
+		modDepth: 0.7,
+		modFreq: 2
+	);
+
+	//mix
+	//snd = wet + dry;
+	snd = XFade2.ar(dry, wet, (mix * 2) - 1);
+	snd = snd * -15.dbamp;
+	Out.ar(out,snd);
+}).add;
+
 )
 
 /// =====================================================================
 // 3. Message Recieving
 // =====================================================================
 (
-~activeDrones = Dictionary.new;
+~activeDrones = Dictionary.new; //setup
+~bellBus = Bus.audio(s, 2); //bus for bells
+~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~bellBus, \out, 0, \mix, 0.5, \t60, 2]);
 
 // LISTENER 1: Handles incoming Note Triggers with Key-Value pairs
 OSCdef.new(\noteTriggerListener, { |msg|
@@ -97,6 +159,29 @@ OSCdef.new(\sliderUpdateListener, { |msg|
 
 }, '/juce/slider');
 
+//ANTONIO's LISTENER
+OSCdef.new(\bellTrigger, {|msg|
+	var bellArgs, newBellSynth;
+	bellArgs = msg.drop(1); //isolate just parameter list
+
+	newBellSynth = Synth(\fm_2, bellArgs ++ [\out, ~bellBus]); //++ to concatenate
+	("Bells triggered with args: " ++ bellArgs).postln; //debug print
+
+}, '/juce/triggerBell');
+
+//Reverb Listener
+OSCdef.new(\reverbTrigger, {|msg|
+	var reverbArgs;
+
+	reverbArgs = msg.drop(1);
+	if (~globalReverb.notNil) {
+		~globalReverb.set(*reverbArgs);
+		("Updated reverb with args: " ++ reverbArgs).postln;
+	};
+
+}, '/juce/reverb');
+
+
 "--- SMART KEY-VALUE ENGINE ACTIVE: Waiting for JUCE ---".postln;
 )
 
@@ -127,3 +212,21 @@ Synth(\juceDrone, [\freq, 440, \atk, 0.1, \sus, 5, \rel, 0.4, \waveShape, 3]);
 Synth(\juceDrone, [\freq, 440, \atk, 0.1, \sus, 5, \rel, 0.4, \waveShape, 0]);
 Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 2,]);
 Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0.4]);
+
+
+//Bell and Reverb Tests
+// Create a fake "JUCE" network address pointing at SuperCollider's own port
+~fakeJuce = NetAddr("127.0.0.1", NetAddr.langPort);
+
+// 1. Simulate JUCE triggering a bell!
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \iScale, 4, \rel, 0.5);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \iScale, 15, \rel, 1.2, \pan, -0.8);
+
+// 2. Simulate JUCE turning up the Reverb Mix and Room Size (t60)
+~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
+
+// Hit a bell again to hear the massive new reverb!
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \iScale, 3);
+
+// Bring the reverb back down
+~fakeJuce.sendMsg('/juce/reverb', \mix, 0.2, \t60, 1.0);
