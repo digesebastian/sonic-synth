@@ -14,6 +14,22 @@ MainComponent::MainComponent()
 		LOG_ERROR("Error: Could not connect to UDP port 7000");
 	}
 	oscReceiver.addListener(this);
+
+
+	// logging window setup
+	logWindow.setMultiLine(true);
+	logWindow.setReturnKeyStartsNewLine(true);
+	logWindow.setReadOnly(true);
+	logWindow.setScrollbarsShown(true);
+	logWindow.setCaretVisible(false);
+
+	addAndMakeVisible(logWindow);
+
+	// Set this component as the current global logger
+	juce::Logger::setCurrentLogger(this);
+
+	// Test logs to verify it works instantly
+	juce::Logger::writeToLog("--- Logging messages ---");
 }
 
 MainComponent::~MainComponent()
@@ -21,6 +37,8 @@ MainComponent::~MainComponent()
     oscReceiver.removeListener(this);
 
 	oscReceiver.disconnect();
+
+	juce::Logger::setCurrentLogger(nullptr);
 
 	LOG_INFO("disconnected");
 }
@@ -93,4 +111,18 @@ void MainComponent::resized()
     // This is called when the MainComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
+
+	logWindow.setBounds(getLocalBounds().reduced(10));
+}
+
+// This callback captures ALL incoming log messages securely
+void MainComponent::logMessage(const juce::String& message)
+{
+	// Because logging can occur from background threads, 
+	// we MUST safely push the UI update to the main Message Thread.
+	juce::MessageManager::callAsync([this, message]()
+		{
+			logWindow.moveCaretToEnd();
+			logWindow.insertTextAtCaret(message + juce::newLine);
+		});
 }
