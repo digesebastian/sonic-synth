@@ -1,6 +1,10 @@
 import processing.serial.*; 
+import oscP5.*;
+import netP5.*;
 
-Serial myPort; 
+Serial myPort;
+OscP5 oscP5;          // The OscP5 networking object
+NetAddress myRemoteLocation; // Where we are sending the OSC messages
 
 // ---- TELEMETRY & DATA ----
 int iAngle = 0;
@@ -74,6 +78,15 @@ float wavePhase   = 0.0;
 void setup() {
   size(1100, 650);
   smooth(8);
+  
+  
+  // We start oscP5 listening on port 12000 (standard setup, even if we just send)
+  oscP5 = new OscP5(this, 12000);
+  
+  // Set the destination IP and Port.
+  // "127.0.0.1" means "this same computer" (localhost). 
+  // 7000 is the port your receiving app (like MaxMSP, TouchDesigner, or Unreal) is listening on.
+  myRemoteLocation = new NetAddress("127.0.0.1", 7000);
   
   try {
     // Make sure this matches your Arduino port!
@@ -159,6 +172,8 @@ void serialEvent (Serial myPort) {
           iAngle = tempAngle;
           iDistance = filteredDist; 
           
+          sendSonarData();
+          
           if (radarHistory[iAngle] == 999.0) {
              radarHistory[iAngle] = filteredDist; 
           } else {
@@ -174,6 +189,18 @@ void serialEvent (Serial myPort) {
     }
   }
 }
+
+// send sonar data to JUCE
+void sendSonarData() {
+     OscMessage sonarMessage = new OscMessage("/sonar");
+     
+     sonarMessage.add(iAngle);
+     sonarMessage.add(iDistance);
+     
+     oscP5.send(sonarMessage, myRemoteLocation); // Send it!
+     System.out.println("sent sonar data to JUCE, angle " + iAngle + " and distance " + iDistance);
+}
+
 
 // ---- UI DRAWING FUNCTIONS ----
 
