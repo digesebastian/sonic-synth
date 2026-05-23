@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "SoundSourceDetector.h"
 
 //==============================================================================
 /*
@@ -8,7 +9,8 @@
     your controls and content.
 */
 class MainComponent  : public juce::Component,
-    public juce::OSCReceiver::Listener<juce::OSCReceiver::RealtimeCallback>
+    public juce::OSCReceiver::Listener<juce::OSCReceiver::RealtimeCallback>,
+    public juce::Logger
 {
 public:
     //==============================================================================
@@ -21,12 +23,19 @@ public:
     
     void oscMessageReceived(const juce::OSCMessage& message) override;
 
+    void logMessage(const juce::String& message) override;
 private:
     // OSC sender instance.
     juce::OSCSender oscSender;
     
     // OSC receiver instance.
     juce::OSCReceiver oscReceiver;
+    
+    // Sound source detector instance
+    SoundSourceDetector detector;
+
+    // log window for UI
+    juce::TextEditor logWindow;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

@@ -5,6 +5,11 @@
   <MAINGROUP id="XNuLVD" name="sonic-synth-juce-gui">
     <GROUP id="{2FC4F32C-E1D5-635F-6E6B-A8F8D61858A6}" name="Source">
       <FILE id="N9iHNw" name="Logging.h" compile="0" resource="0" file="Source/Logging.h"/>
+      <FILE id="b4h5tq" name="SoundSourceDetector.cpp" compile="1" resource="0"
+            file="Source/SoundSourceDetector.cpp"/>
+      <FILE id="O1eUIH" name="SoundSource.h" compile="0" resource="0" file="Source/SoundSource.h"/>
+      <FILE id="O46wd3" name="SoundSourceDetector.h" compile="0" resource="0"
+            file="Source/SoundSourceDetector.h"/>
       <FILE id="uQ2JVO" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="v9ppa0" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="ijJ4ki" name="MainComponent.cpp" compile="1" resource="0"
