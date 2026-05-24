@@ -38,7 +38,9 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 	}
 	else
 	{
-		LOG_INFO("Not detecting sound source");
+		if (currentlyScanningSource) {
+			LOG_INFO("No longer detecting sound source");
+		}
 		currentlyScanningSource = false;
 	}
     
@@ -47,11 +49,13 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 
 int SoundSourceDetector::computeFreq(const int& angle)
 {
+	// divide the angle into 12 semitones
 	int semitone = (angle * 12) / defaultValues::maxAngle;
 	if (semitone > 12)
 	{
 		semitone = 12;
 	}
+	// compute the frequency using the formula: freq = minFreq * 2^(semitone/12)
 	int freq = defaultValues::minFreq * std::pow(2.0, semitone / 12.0);
 
 	return freq;

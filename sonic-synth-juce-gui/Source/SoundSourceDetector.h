@@ -14,7 +14,7 @@
 
 namespace defaultValues
 {
-	constexpr int maxDistance = 100; // TODO: change this to the correct value
+	constexpr int maxDistance = 100;
 	constexpr int minFreq = 440;
 	constexpr int maxFreq = 880;
     constexpr int minAngle = 0;
@@ -33,9 +33,11 @@ public:
     
     std::optional<SoundSource> checkForNewSource(const int& angle, const int& distance);
 
+	void setMaxDistance(const float& newMaxDistance) { maxDistance = newMaxDistance; }
+
 private:
-    int maxDistance = defaultValues::maxDistance;
     bool currentlyScanningSource = false;
+	float maxDistance = defaultValues::maxDistance;
 
     int computeFreq(const int& angle);
 

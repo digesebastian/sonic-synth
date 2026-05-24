@@ -43,7 +43,8 @@ MainComponent::~MainComponent()
 
 void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 {
-	if (message.getAddressPattern() == "/sonar")
+	juce::String address = message.getAddressPattern().toString();
+	if (address == "/sonar")
 	{
 		if (message.size() == 2)
 		{
@@ -55,7 +56,7 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 			SoundSource newSource = potentialSource.value();
 			int newFreq = newSource.freq;
 
-			juce::OSCMessage messageToSend("/juce/triggerNote");
+			juce::OSCMessage messageToSend(triggerAddress);
 			messageToSend.addArgument(juce::String("freq"));
 			messageToSend.addArgument(newFreq);
 
@@ -65,13 +66,13 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 			LOG_WARN("Received an unexpected number of arguments: " + message.size());
 		}
 	}
-	else if (message.getAddressPattern() == "/instrumentSlider") {
+	else if (address == "/instrumentSlider") {
 		if (message.size() == 1)
 		{
 			float sliderValue = message[0].getFloat32();
 			LOG_INFO("Received slider OSC message with value: " + juce::String(sliderValue));
 
-			juce::OSCMessage messageToSend("/juce/slider");
+			juce::OSCMessage messageToSend(instrumentSliderAddress);
 			messageToSend.addArgument(sliderValue);
 
 			oscSender.send(messageToSend);
@@ -80,8 +81,31 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 			LOG_WARN("Received an unexpected number of arguments: " + message.size());
 		}
 	}
+	else if (address == "/maxDistanceSlider") {
+		float newMaxDistance = message[0].getFloat32();
+		LOG_INFO("Received max distance slider OSC message with value: " + juce::String(newMaxDistance));
+		detector.setMaxDistance(newMaxDistance);
+	}
+	else if (address == "/instrumentChange") {
+		changeInstrument(message[0].getString());
+	}
 	else {
 		LOG_WARN("Received OSC message with unrecognized address pattern: " + message.getAddressPattern().toString());
+	}
+}
+
+void MainComponent::changeInstrument(const juce::String& newInstrument)
+{
+	if (newInstrument == "waves") {
+		triggerAddress = "/juce/triggerNote";
+		instrumentSliderAddress = "/juce/slider";
+	}
+	else if (newInstrument == "bells") {
+		triggerAddress = "/juce/triggerBell";
+		instrumentSliderAddress = "/juce/reverb";
+	}
+	else {
+		LOG_WARN("Attempted to change to unrecognized instrument: " + newInstrument);
 	}
 }
 

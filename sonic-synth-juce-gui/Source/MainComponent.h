@@ -23,7 +23,7 @@ public:
     
     void oscMessageReceived(const juce::OSCMessage& message) override;
 
-    void logMessage(const juce::String& message) override;
+    void changeInstrument(const juce::String& newInstrument);
 private:
     // OSC sender instance.
     juce::OSCSender oscSender;
@@ -36,6 +36,11 @@ private:
 
     // log window for UI
     juce::TextEditor logWindow;
+
+	juce::String triggerAddress = "/juce/triggerNote";
+	juce::String instrumentSliderAddress = "/juce/slider";
+
+    void logMessage(const juce::String& message) override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
 };

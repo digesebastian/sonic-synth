@@ -1,0 +1,14 @@
+I need the following values sent, whenever they change:
+- max value, as an integer
+- instrument slider value, as a float
+- instrument chosen, as an integer between 0 and 1 or a string "bell"/"wave"
+- the parameter connected to the angle
+- the parameter connected to the distance
+
+
+
+
+TODO:
+Implement functionality do make angle and distance do different stuff
+Implement detection time threshold.
+Properly implement reverb for bell.
