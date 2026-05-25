@@ -13,6 +13,4 @@
 
 struct SoundSource
 {
-    float param1;
-	float param2;
 };

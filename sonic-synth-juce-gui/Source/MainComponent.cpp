@@ -129,6 +129,19 @@ void MainComponent::changeInstrument(const juce::String& newInstrument)
 
 float MainComponent::calculateParameterValue(minMaxParam parameter, int sonarValue, float minSonarVal, float maxSonarVal)
 {
+	if (parameter.name == "freq") {
+		// special handling for frequency parameter to quantize it to semitones
+		// divide the sonar value into 12 semitones
+		int semitone = (sonarValue * 12) / (maxSonarVal - minSonarVal);
+		if (semitone > 12)
+		{
+			semitone = 12;
+		}
+		// compute the frequency using the formula: freq = minFreq * 2^(semitone/12)
+		int freq = parameter.min * std::pow(2.0, semitone / 12.0);
+
+		return freq;
+	}
 	// map the sonar value to a 0-1 range based on the expected min and max sonar values
 	float normalizedValue = (sonarValue - minSonarVal) / (maxSonarVal - minSonarVal);
 	// scale and shift the normalized value to fit within the parameter's expected range
