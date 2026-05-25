@@ -54,7 +54,7 @@ SynthDef.new(\juceDrone, {
 
 //BELL AND REVERB SYNTHDEFS
 SynthDef(\fm_2, {
-	arg freq=220, mRatio=9, cRatio=1, index=1, iScale=5,
+	arg freq=220, mRatio=9, cRatio=1, index=1, mLevel=5,
 	amp=0.2, atk=0.01, rel=0.7, cAtk=5, cRel=(-4), pan=0, out=0, detune=1.5, spread=0.8;
 
 	var car, mod, env, iEnv, detunedVoices;
@@ -62,7 +62,7 @@ SynthDef(\fm_2, {
 	//modulation index
 	iEnv = EnvGen.kr(
 		Env(
-			[index, index*iScale, index],
+			[index, index*mLevel, index],
 			[atk, rel],
 			[cAtk, cRel]
 		)
@@ -235,17 +235,18 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 ~fakeJuce = NetAddr("127.0.0.1", NetAddr.langPort);
 
 //bell tests
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \iScale, 4, \rel, 0.5);
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \iScale, 15, \rel, 1.2, \pan, -0.8);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \mLevel, 4, \rel, 0.5);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 440, \mLevel, 4, \rel, 0.5, \mRatio, 10);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \mLevel, 10, \rel, 1.2, \pan, -0.8);
 
 //large reverb
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
 
 //higher bell
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \iScale, 3);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \mLevel, 3);
 
 //lower mix
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.2, \t60, 1.0);
 
 //test combo
-~fakeJuce.sendMsg('/juce/combo', \freq, 800, \iScale, 8, \mix, 0.9, \t60, 6.0);
+~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \mix, 0.5, \t60, 1.0);
