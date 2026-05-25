@@ -54,7 +54,7 @@ SynthDef.new(\juceDrone, {
 
 //BELL AND REVERB SYNTHDEFS
 SynthDef(\fm_2, {
-	arg freq=220, mRatio=9, cRatio=1, index=1, iScale=5,
+	arg freq=220, mRatio=9, cRatio=1, index=1, mLevel=5,
 	amp=0.2, atk=0.01, rel=0.7, cAtk=5, cRel=(-4), pan=0, out=0, detune=1.5, spread=0.8;
 
 	var car, mod, env, iEnv, detunedVoices;
@@ -62,7 +62,7 @@ SynthDef(\fm_2, {
 	//modulation index
 	iEnv = EnvGen.kr(
 		Env(
-			[index, index*iScale, index],
+			[index, index*mLevel, index],
 			[atk, rel],
 			[cAtk, cRel]
 		)
@@ -70,7 +70,7 @@ SynthDef(\fm_2, {
 
 	//amplitude envelope
 	env = EnvGen.kr(Env.perc(atk, rel,curve:[cAtk, cRel]), doneAction:2);
-	detunedVoices = [-2, -1, 0, 1, 2] * detune; //initialize 5 voice unison detune
+	detunedVoices = [-2, -1, 0, 1, 2] * detune; //initialize 5 voice unison detune with frequency offset value for each voice multiplied by detune amount
 
 	//modulator carrier
 	mod = SinOsc.ar(freq * mRatio, mul:freq * mRatio * iEnv);
@@ -87,9 +87,9 @@ SynthDef(\fm_2, {
 
 }).add;
 
-//suggested reverb parameters to change: t60 (decay time), size
+//suggested reverb parameters to change: reverbDecay (decay time), size
 SynthDef(\jp_reverb, {
-	arg in, t60=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, mix=0.5;
+	arg in, reverbDecay=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, reverbMix=0.5;
 	var snd, dry, wet;
 
 	snd = In.ar(in, 2);
@@ -97,7 +97,7 @@ SynthDef(\jp_reverb, {
 
 	wet = JPverb.ar(
 		snd.sum,
-		t60: t60,
+		t60: reverbDecay,
 		size: roomsize,
 		damp: damp,
 		modDepth: 0.7,
@@ -106,9 +106,26 @@ SynthDef(\jp_reverb, {
 
 	//mix
 	//snd = wet + dry;
-	snd = XFade2.ar(dry, wet, (mix * 2) - 1);
+	snd = XFade2.ar(dry, wet, (reverbMix * 2) - 1);
 	snd = snd * -15.dbamp;
 	Out.ar(out,snd);
+}).add;
+
+SynthDef(\tape_delay, {
+	//delayTime -> 0.01-2
+	arg in, out=0, delayTime=0.3, fdbk=0.6, delayMix=0.4;
+	var dry, wet, local;
+
+	dry = In.ar(in, 2); //setup input
+	local = LocalIn.ar(2) + dry; //setup feedback loop
+
+	wet = DelayC.ar(local, 2.0, delayTime);
+
+
+
+	LocalOut.ar(wet * fdbk);
+	Out.ar(out, XFade2.ar(dry, wet, (delayMix * 2) - 1));
+
 }).add;
 
 )
@@ -119,7 +136,9 @@ SynthDef(\jp_reverb, {
 (
 ~activeDrones = Dictionary.new; //setup
 ~bellBus = Bus.audio(s, 2); //bus for bells
-~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~bellBus, \out, 0, \mix, 0.5, \t60, 2]);
+~reverbBus = Bus.audio(s, 2); //bus for Delay to Reverb
+~delayOut = Synth.tail(s, \tape_delay, [\in, ~bellBus, \out, ~reverbBus, \delayMix, 0.4]);
+~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~reverbBus, \out, 0, \reverbMix, 0.5, \reverbDecay, 2]); //global reverb variable
 
 // LISTENER 1: Handles incoming Note Triggers with Key-Value pairs
 OSCdef.new(\noteTriggerListener, { |msg|
@@ -174,12 +193,43 @@ OSCdef.new(\reverbTrigger, {|msg|
 	var reverbArgs;
 
 	reverbArgs = msg.drop(1);
-	if (~globalReverb.notNil) {
-		~globalReverb.set(*reverbArgs);
+	if (~reverbOut.notNil) {
+		~reverbOut.set(*reverbArgs);
 		("Updated reverb with args: " ++ reverbArgs).postln;
 	};
 
 }, '/juce/reverb');
+
+//Delay Listener
+OSCdef.new(\delayTrigger, {|msg|
+	var delayArgs;
+
+	delayArgs = msg.drop(1);
+	if (~delayOut.notNil) {
+		~delayOut.set(*delayArgs);
+		("Delay updated with args: " ++ delayArgs).postln;
+	};
+}, '/juce/delay');
+
+//Bell+Reverb Combo
+OSCdef.new(\bellReverbComboTrigger, { |msg|
+	var comboArgs;
+
+	comboArgs = msg.drop(1);
+	if (~reverbOut.notNil) {
+		~reverbOut.set(*comboArgs);
+	};
+
+	if (~delayOut.notNil) {
+		~delayOut.set(*comboArgs);
+	};
+
+	Synth(\fm_2, comboArgs ++ [\out, ~bellBus]);
+
+	("Bells and Reverb triggered with args: " ++ comboArgs).postln;
+
+
+}, '/juce/combo');
 
 
 "--- SMART KEY-VALUE ENGINE ACTIVE: Waiting for JUCE ---".postln;
@@ -218,15 +268,22 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 // Create a fake "JUCE" network address pointing at SuperCollider's own port
 ~fakeJuce = NetAddr("127.0.0.1", NetAddr.langPort);
 
-// 1. Simulate JUCE triggering a bell!
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \iScale, 4, \rel, 0.5);
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \iScale, 15, \rel, 1.2, \pan, -0.8);
+//bell tests
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \mLevel, 4, \rel, 0.5);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 220, \mLevel, 4, \rel, 1, \mRatio, 10, \detune, 1.5, \spread, 10);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \mLevel, 10, \rel, 1.2);
 
-// 2. Simulate JUCE turning up the Reverb Mix and Room Size (t60)
-~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
+//large reverb
+~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.9, \reverbDecay, 8.0);
 
-// Hit a bell again to hear the massive new reverb!
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \iScale, 3);
+//higher bell
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \mLevel, 3);
 
-// Bring the reverb back down
-~fakeJuce.sendMsg('/juce/reverb', \mix, 0.2, \t60, 1.0);
+//lower mix
+~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.2, \reverbDecay, 1.0);
+
+//test combo
+~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \reverbMix, 0.5, \reverbDecay, 1.0);
+
+//test new combo
+~fakeJuce.sendMsg('/juce/combo', \freq, 330, \delayTime, 0.7, \feedback, 0.4, \delayMix, 0.7, \reverbDecay, 1.0);
