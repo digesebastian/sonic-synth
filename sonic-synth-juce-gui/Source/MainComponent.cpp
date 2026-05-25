@@ -82,13 +82,13 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 			LOG_WARN("Received an unexpected number of arguments: " + message.size());
 		}
 	}
-	else if (address == "/instrumentSlider") {
+	else if (address == "/waveform") {
 		if (message.size() == 1)
 		{
 			float sliderValue = message[0].getFloat32();
 			LOG_INFO("Received slider OSC message with value: " + juce::String(sliderValue));
 
-			juce::OSCMessage messageToSend(instrumentSliderAddress);
+			juce::OSCMessage messageToSend("/juce/slider");
 			messageToSend.addArgument(sliderValue);
 
 			oscSender.send(messageToSend);
@@ -97,13 +97,50 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 			LOG_WARN("Received an unexpected number of arguments: " + message.size());
 		}
 	}
-	else if (address == "/maxDistanceSlider") {
+	else if (address == "/reverb/mix") {
+		float sliderValue = message[0].getFloat32();
+		LOG_INFO("Received bell mix slider OSC message with value: " + juce::String(sliderValue));
+
+		juce::OSCMessage messageToSend("/juce/reverb");
+		messageToSend.addArgument(sliderValue);
+
+		oscSender.send(messageToSend);
+		// TODO
+		// 0-1
+	}
+	else if (address == "/reverb/decay") {
+		// TODO
+		// 0-10
+	}
+	else if (address == "/max_dist") {
 		float newMaxDistance = message[0].getFloat32();
 		LOG_INFO("Received max distance slider OSC message with value: " + juce::String(newMaxDistance));
 		maxDistance = newMaxDistance;
 	}
-	else if (address == "/instrumentChange") {
-		changeInstrument(message[0].getString());
+	else if (address == "/instrument") {
+		LOG_INFO("Received instrument change OSC message with value: " + message[0].getInt32());
+		if (message[0].getInt32() == 0) {
+			changeInstrument("waves");
+		}
+		else if (message[0].getInt32() == 1) {
+			changeInstrument("bells");
+		}
+	}
+	else if (address == "/mapping/angle") {
+		int newAngleParam = message[0].getInt32();
+		LOG_INFO("Received angle mapping OSC message with value: " + juce::String(newAngleParam));
+		angleParameter = newAngleParam;
+	}
+	else if (address == "/mapping/distance") {
+		int newDistanceParam = message[0].getInt32();
+		LOG_INFO("Received distance mapping OSC message with value: " + juce::String(newDistanceParam));
+		distanceParameter = newDistanceParam;
+	}
+	else if (address == "/sample_skip/active") {
+		//TODO int 0-1
+	}
+	else if (address == "/sample_skip/count") {
+		//TODO int 10-60
 	}
 	else {
 		LOG_WARN("Received OSC message with unrecognized address pattern: " + message.getAddressPattern().toString());

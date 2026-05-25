@@ -19,10 +19,10 @@ struct minMaxParam {
 
 namespace instrumentParams {
     inline const std::array<minMaxParam, 4> waveParams = {
-    minMaxParam{"freq", 110.0f, 220.0f},
-    minMaxParam{"sus", 6.0f, 60.0f},
-    minMaxParam{"rel", 0.8f, 30.0f},
-    minMaxParam{"amp", 0.0f, 1.0f}
+        minMaxParam{"freq", 110.0f, 220.0f},
+        minMaxParam{"sus", 6.0f, 60.0f},
+        minMaxParam{"rel", 0.8f, 30.0f},
+        minMaxParam{"amp", 0.0f, 1.0f}
     };
 
     inline const std::array<minMaxParam, 5> bellParams = {
