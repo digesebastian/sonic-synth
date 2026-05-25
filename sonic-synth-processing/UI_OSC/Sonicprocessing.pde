@@ -3,8 +3,8 @@ import oscP5.*;
 import netP5.*;
 
 Serial myPort;
-OscP5 oscP5;          // The OscP5 networking object
-NetAddress myRemoteLocation; // Where we are sending the OSC messages
+OscP5 oscP5;          
+NetAddress myRemoteLocation; 
 
 // ---- TELEMETRY & DATA ----
 int iAngle = 0;
@@ -26,70 +26,87 @@ final int cAlertRed   = #FF3344;
 final int cTextDim    = #8899A6; 
 final int cMenuBg     = #162026; 
 
-// ---- DROPDOWN CONFIGURATIONS ----
-String[] parameters = {"Frequency", "Attack", "Sustain", "Release", "Amplitude", "Panning"};
+// ---- DYNAMIC DROPDOWN CONFIGURATIONS ----
+String[] synthParams = {"Freq", "Sustain", "Release", "Amplitude"};
+String[] bellParams  = {"Freq", "mRatio", "mLevel", "Release", "detune"};
+String[] soundOptions = {"Synth Sound", "Bell Sound"};
+
 int angleRouteIndex = 0;    
 int distRouteIndex = 1; 
+int soundRouteIndex = 0; 
+
 boolean angleMenuOpen = false;
 boolean distMenuOpen = false;
+boolean soundMenuOpen = false;
 
 float dropW = 190;
 float dropH = 28;
 
-// ---- HARDCODED LAYOUT CONFIGURATIONS ----
+// ---- SYMMETRICAL LAYOUT CONFIGURATIONS ----
 float xLeftCol = 40;
-float yAngleDrop = 120;
-float yDistDrop  = 240;
-float yThreshSliders = 360;
+float yAngleDrop    = 100;
+float yDistDrop     = 160; 
+float ySampleSwitch = 220; 
+float ySampleSlider = 280;
 
 float xRightCol = 500;
-float yMaxDistSlider  = 120;
-float yServoSpeed     = 220;
-float yWaveformSlider = 320;
+float yMaxDistSlider  = 100; 
+float yServoSpeed     = 160; 
+float ySoundDrop      = 220; 
+float yDynSlider1     = 280; 
+float yDynSlider2     = 340; 
 float sliderW = 300;
 
 // Interactive Variables
 float maxDistanceValue = 100.0; // cm 
 int servoSpeedDelay = 30;
+
 float waveShapeValue = 0.0;
-float lastSentWave   = -1.0; 
+float reverbMixValue = 50.0;
+float reverbDecayValue = 5.0;
+
+boolean sampleThreshActive = false;
+int detectionSampleThresh = 15; 
+
+// ---- OSC STATE TRACKING (MEMORY) ----
 int lastSentSpeed   = -1;
-boolean bellSwitchActive = false;
+float lastSentWave   = -1.0; 
+int lastSentSoundRoute = -1;
+int lastSentAngleIndex = -1; // Changed to int
+int lastSentDistIndex = -1;  // Changed to int
+float lastSentMaxDist = -1.0; // Added tracker
+int lastSentSampleSwitch = -1;
+int lastSentSampleThresh = -1;
+float lastSentReverbMix = -1.0;
+float lastSentReverbDecay = -1.0;
 
-float distGapThresh = 5.0;
-float angleGapThresh = 4.0;
-float detectionTimeThresh = 2.0;
+boolean dragMaxDist = false, dragSpeed = false;
+boolean dragDyn1 = false, dragDyn2 = false;
+boolean dragSample = false;
 
-// Slider dragging state tracking
-boolean dragMaxDist = false, dragSpeed = false, dragWave = false;
-boolean dragDistG = false, dragAngleG = false, dragTimeG = false;
-
-// Bottom Right Frame Elements
-float radarCenterX = 620;
+float radarCenterX = 425; 
 float radarCenterY = 530;
 float radarRadius  = 160;
 
-float waveCanvasX = 430;
+float waveCanvasX = 235;  
 float waveCanvasY = 550;
 float waveCanvasW = 380;
 float waveCanvasH = 65;
 float wavePhase   = 0.0;
 
+String[] getCurrentParams() {
+  return (soundRouteIndex == 0) ? synthParams : bellParams;
+}
+
 void setup() {
   size(1100, 650);
+  pixelDensity(displayDensity()); 
   smooth(8);
   
-  
-  // We start oscP5 listening on port 12000 (standard setup, even if we just send)
   oscP5 = new OscP5(this, 12000);
-  
-  // Set the destination IP and Port.
-  // "127.0.0.1" means "this same computer" (localhost). 
-  // 7000 is the port your receiving app (like MaxMSP, TouchDesigner, or Unreal) is listening on.
   myRemoteLocation = new NetAddress("127.0.0.1", 7000);
   
   try {
-    // Make sure this matches your Arduino port!
     myPort = new Serial(this, "COM16", 9600); 
     myPort.bufferUntil('.'); 
   } catch (Exception e) {
@@ -101,10 +118,12 @@ void setup() {
     radarAlpha[i] = 0; 
   }
   
-  // Initialize median buffer
   for(int i = 0; i < 3; i++) {
     medianBuffer[i] = 999;
   }
+  
+  println("--- INITIALIZING SYSTEM & SENDING DEFAULT STATES ---");
+  checkAndSendUIUpdates();
 }
 
 void draw() {
@@ -116,34 +135,35 @@ void draw() {
   textAlign(LEFT, TOP);
   text("N_Tech Acoustic Radar System", xLeftCol, 35);
   
-  // 1. LEFT COLUMN
-  drawDropdownSelectionBox(xLeftCol, yAngleDrop, "Angle Mapping", parameters[angleRouteIndex], angleMenuOpen);
-  drawDropdownSelectionBox(xLeftCol, yDistDrop, "Distance Mapping", parameters[distRouteIndex], distMenuOpen);
+  drawDropdownSelectionBox(xLeftCol, yAngleDrop, "Angle Mapping", getCurrentParams()[angleRouteIndex], angleMenuOpen);
+  drawDropdownSelectionBox(xLeftCol, yDistDrop, "Distance Mapping", getCurrentParams()[distRouteIndex], distMenuOpen);
   
-  updateAndDrawSlider(xLeftCol, yThreshSliders, distGapThresh, 1.0, 20.0, "Distance Gap Threshold", "cm", dragDistG);
-  updateAndDrawSlider(xLeftCol, yThreshSliders + 75, angleGapThresh, 1.0, 15.0, "Angle Gap Threshold", "°", dragAngleG);
-  updateAndDrawSlider(xLeftCol, yThreshSliders + 150, detectionTimeThresh, 0.5, 5.0, "Detection Time Threshold", "s", dragTimeG);
+  drawSampleSwitch(xLeftCol, ySampleSwitch);
+  updateAndDrawSlider(xLeftCol, ySampleSlider, detectionSampleThresh, 10.0, 60.0, "Detection Sample Threshold", "smpls", dragSample);
   
-  // 2. RIGHT COLUMN
   updateAndDrawSlider(xRightCol, yMaxDistSlider, maxDistanceValue, 40.0, 200.0, "Max Range Limit", "cm", dragMaxDist);
   
   int speedPercent = int(map(servoSpeedDelay, 100, 10, 10, 100));
   updateAndDrawSlider(xRightCol, yServoSpeed, speedPercent, 10, 100, "Servo Rotation Speed", "%", dragSpeed);
-  updateAndDrawSlider(xRightCol, yWaveformSlider, waveShapeValue, 0.0, 3.0, "Waveform Selection", "", dragWave);
   
-  drawBellSwitch();
+  drawDropdownSelectionBox(xRightCol, ySoundDrop, "Sound Generator", soundOptions[soundRouteIndex], soundMenuOpen);
   
-  // 3. BOTTOM RIGHT LAYOUT PANELS
+  if (soundRouteIndex == 0) {
+    updateAndDrawSlider(xRightCol, yDynSlider1, waveShapeValue, 0.0, 3.0, "Waveform Selection", "", dragDyn1);
+  } else {
+    updateAndDrawSlider(xRightCol, yDynSlider1, reverbMixValue, 0.0, 100.0, "Reverb Mix", "%", dragDyn1);
+    updateAndDrawSlider(xRightCol, yDynSlider2, reverbDecayValue, 0.0, 10.0, "Reverb Decay", "s", dragDyn2);
+  }
+  
   stroke(cBorder); strokeWeight(1); noFill();
-  rect(430, 360, 380, 190); 
-  rect(430, 550, 380, 70);  
-  rect(810, 360, 250, 260); 
+  rect(235, 360, 380, 190); 
+  rect(235, 550, 380, 70);  
+  rect(615, 360, 250, 260); 
   
   drawRadarOutput();
   drawOscilloscopePreview();
   drawTerminalDataReadouts();
   
-  // 4. OVERLAY LAYER
   renderDropdownListOverlays();
 }
 
@@ -152,113 +172,144 @@ void serialEvent (Serial myPort) {
   if (data != null && data.length() > 2) {
     data = data.substring(0, data.length()-1).trim();
     int splitIndex = data.indexOf(","); 
-    
     if (splitIndex > 0) {
       try {
         int tempAngle = int(data.substring(0, splitIndex).trim());
         int rawDist = int(data.substring(splitIndex+1).trim());
-        
-        if(tempAngle >= 0 && tempAngle <= 180 && rawDist > 0 && rawDist < 400) {
-          
-          // --- 1. OUTLIER REJECTION (MEDIAN FILTER) ---
-          medianBuffer[medianIndex] = rawDist;
-          medianIndex = (medianIndex + 1) % 3;
-          
-          int[] sorted = {medianBuffer[0], medianBuffer[1], medianBuffer[2]};
-          java.util.Arrays.sort(sorted);
-          int filteredDist = sorted[1]; 
-          
-          // --- 2. APPLY TO UI ---
+        if(tempAngle >= 0 && tempAngle <= 180) {
           iAngle = tempAngle;
-          iDistance = filteredDist; 
-          
-          sendSonarData();
-          
-          if (radarHistory[iAngle] == 999.0) {
-             radarHistory[iAngle] = filteredDist; 
-          } else {
-             radarHistory[iAngle] = (radarHistory[iAngle] * 0.6) + (filteredDist * 0.4);
-          }
-          
-          // --- 3. JUCE TRIGGER PREP ---
-          if (radarHistory[iAngle] <= maxDistanceValue) {
-             radarAlpha[iAngle] = 255; // Light up the target point
-          }
+          if (rawDist > 0 && rawDist < 400) {
+            medianBuffer[medianIndex] = rawDist;
+            medianIndex = (medianIndex + 1) % 3;
+            int[] sorted = {medianBuffer[0], medianBuffer[1], medianBuffer[2]};
+            java.util.Arrays.sort(sorted);
+            iDistance = sorted[1]; 
+            if (radarHistory[iAngle] == 999.0) radarHistory[iAngle] = iDistance; 
+            else radarHistory[iAngle] = (radarHistory[iAngle] * 0.6) + (iDistance * 0.4);
+            if (radarHistory[iAngle] <= maxDistanceValue) radarAlpha[iAngle] = 255; 
+          } else { iDistance = 999; }
+          sendSonarData(); 
         }
       } catch (Exception e) {}
     }
   }
 }
 
-// send sonar data to JUCE
 void sendSonarData() {
      OscMessage sonarMessage = new OscMessage("/sonar");
-     
      sonarMessage.add(iAngle);
      sonarMessage.add(iDistance);
-     
-     oscP5.send(sonarMessage, myRemoteLocation); // Send it!
-     System.out.println("sent sonar data to JUCE, angle " + iAngle + " and distance " + iDistance);
+     oscP5.send(sonarMessage, myRemoteLocation); 
 }
 
+void checkAndSendUIUpdates() {
+  if (soundRouteIndex != lastSentSoundRoute) {
+    OscMessage msg = new OscMessage("/instrument");
+    msg.add(soundRouteIndex);
+    oscP5.send(msg, myRemoteLocation);
+    println("OSC OUT -> /instrument : " + soundRouteIndex);
+    lastSentSoundRoute = soundRouteIndex;
+  }
+  
+  if (maxDistanceValue != lastSentMaxDist) {
+    OscMessage msg = new OscMessage("/max_dist");
+    msg.add(maxDistanceValue);
+    oscP5.send(msg, myRemoteLocation);
+    println("OSC OUT -> /max_dist : " + maxDistanceValue);
+    lastSentMaxDist = maxDistanceValue;
+  }
+  
+  if (angleRouteIndex != lastSentAngleIndex) {
+    OscMessage msg = new OscMessage("/mapping/angle");
+    msg.add(angleRouteIndex);
+    oscP5.send(msg, myRemoteLocation);
+    println("OSC OUT -> /mapping/angle : " + angleRouteIndex);
+    lastSentAngleIndex = angleRouteIndex;
+  }
+  
+  if (distRouteIndex != lastSentDistIndex) {
+    OscMessage msg = new OscMessage("/mapping/distance");
+    msg.add(distRouteIndex);
+    oscP5.send(msg, myRemoteLocation);
+    println("OSC OUT -> /mapping/distance : " + distRouteIndex);
+    lastSentDistIndex = distRouteIndex;
+  }
+  
+  int currentSwitch = sampleThreshActive ? 1 : 0;
+  if (currentSwitch != lastSentSampleSwitch) {
+    OscMessage msg = new OscMessage("/sample_skip/active");
+    msg.add(currentSwitch);
+    oscP5.send(msg, myRemoteLocation);
+    lastSentSampleSwitch = currentSwitch;
+  }
+  
+  if (detectionSampleThresh != lastSentSampleThresh) {
+    OscMessage msg = new OscMessage("/sample_skip/count");
+    msg.add(detectionSampleThresh);
+    oscP5.send(msg, myRemoteLocation);
+    lastSentSampleThresh = detectionSampleThresh;
+  }
+  
+  if (waveShapeValue != lastSentWave) {
+    OscMessage msg = new OscMessage("/waveform");
+    msg.add(waveShapeValue);
+    oscP5.send(msg, myRemoteLocation);
+    lastSentWave = waveShapeValue;
+  }
+  
+  if (reverbMixValue != lastSentReverbMix) {
+    OscMessage msg = new OscMessage("/reverb/mix");
+    msg.add(reverbMixValue);
+    oscP5.send(msg, myRemoteLocation);
+    lastSentReverbMix = reverbMixValue;
+  }
+  
+  if (reverbDecayValue != lastSentReverbDecay) {
+    OscMessage msg = new OscMessage("/reverb/decay");
+    msg.add(reverbDecayValue);
+    oscP5.send(msg, myRemoteLocation);
+    lastSentReverbDecay = reverbDecayValue;
+  }
+}
 
-// ---- UI DRAWING FUNCTIONS ----
-
+// Drawing helpers kept for brevity
 void drawBackgroundGrid() {
-  stroke(cGrid);
-  strokeWeight(1);
+  stroke(cGrid); strokeWeight(1);
   for (int i = 0; i < width; i += 20) line(i, 0, i, height);
   for (int j = 0; j < height; j += 20) line(0, j, width, j);
+}
+
+void drawSampleSwitch(float x, float y) {
+  float swW = 80; float swH = 24;
+  fill(cTextDim); textSize(13); textAlign(LEFT, BOTTOM);
+  text("Sample Skipping Toggle", x, y - 6);
+  stroke(sampleThreshActive ? cNeonCyan : cBorder);
+  fill(sampleThreshActive ? cRadarLine : cBg);
+  rect(x, y, swW, swH, 4);
+  fill(sampleThreshActive ? cNeonCyan : cTextDim);
+  textSize(11); textAlign(CENTER, CENTER);
+  text(sampleThreshActive ? "ON" : "OFF", x + swW/2, y + swH/2);
 }
 
 void drawRadarOutput() {
   pushMatrix();
   translate(radarCenterX, radarCenterY);
-  
   noFill(); stroke(cRadarLine); strokeWeight(1.5);
   arc(0, 0, radarRadius*2, radarRadius*2, PI, TWO_PI);
   arc(0, 0, radarRadius*1.33, radarRadius*1.33, PI, TWO_PI);
   arc(0, 0, radarRadius*0.66, radarRadius*0.66, PI, TWO_PI);
-  
-  for (int a = 0; a <= 180; a += 30) {
-    line(0, 0, radarRadius * cos(radians(a)), -radarRadius * sin(radians(a)));
-  }
-  
+  for (int a = 0; a <= 180; a += 30) line(0, 0, radarRadius * cos(radians(a)), -radarRadius * sin(radians(a)));
   for (int a = 0; a <= 180; a++) {
-    float d = radarHistory[a];
-    float alpha = radarAlpha[a];
-    
-    // Only draw the target if it is within range AND has not faded away completely
-    if (d > 2 && d <= maxDistanceValue && alpha > 0) {
-      float r = d * (radarRadius / maxDistanceValue);
-      float x = r * cos(radians(a));
-      float y = -r * sin(radians(a));
-      
-      // Draw the connecting line (slightly dimmer than the point)
-      stroke(cAlertRed, alpha * 0.5); 
-      strokeWeight(2);
-      line(0, 0, x, y);
-      
-      // Draw the solid target blip locked in place
-      noStroke();
-      fill(cAlertRed, alpha);
-      ellipse(x, y, 5, 5); 
-      
-      // FADE LOGIC: Drain the alpha so it disappears over time, but DO NOT MOVE IT
-      radarAlpha[a] -= 2.0; // Increased fade speed slightly for a cleaner look
-      
-      // Clean up memory completely once it fades to black
-      if (radarAlpha[a] <= 0) {
-        radarAlpha[a] = 0;
-        radarHistory[a] = 999.0;
-      }
+    if (radarHistory[a] > 2 && radarHistory[a] <= maxDistanceValue && radarAlpha[a] > 0) {
+      float r = radarHistory[a] * (radarRadius / maxDistanceValue);
+      float x = r * cos(radians(a)), y = -r * sin(radians(a));
+      stroke(cAlertRed, radarAlpha[a] * 0.5); strokeWeight(2); line(0, 0, x, y);
+      noStroke(); fill(cAlertRed, radarAlpha[a]); ellipse(x, y, 5, 5); 
+      radarAlpha[a] -= 2.0; if (radarAlpha[a] <= 0) { radarAlpha[a] = 0; radarHistory[a] = 999.0; }
     }
   }
-
-  stroke(cNeonCyan, 220); 
-  strokeWeight(3);
+  stroke(cNeonCyan, 220); strokeWeight(3);
   line(0, 0, radarRadius * cos(radians(iAngle)), -radarRadius * sin(radians(iAngle))); 
-  
   popMatrix();
 }
 
@@ -266,183 +317,121 @@ void drawOscilloscopePreview() {
   stroke(cRadarLine, 100);
   line(waveCanvasX, waveCanvasY + waveCanvasH/2, waveCanvasX + waveCanvasW, waveCanvasY + waveCanvasH/2);
   stroke(cNeonCyan, 200); strokeWeight(1.5); noFill();
-  
   beginShape();
   for (int x = 0; x <= waveCanvasW; x += 2) {
     float normX = map(x, 0, waveCanvasW, 0, TWO_PI * 4);
+    float p = (normX + wavePhase) % TWO_PI; if (p < 0) p += TWO_PI; 
+    float sineWave = sin(p), triWave = (abs(p - PI) / PI) * 2.0f - 1.0f, sawWave = (p / PI) - 1.0f, sqWave = (sineWave >= 0) ? 0.7f : -0.7f;
     float yOffset = 0;
-    
-    if (waveShapeValue <= 0.5) {
-      float t = map(waveShapeValue, 0f, 0.5f, 0f, 1f);
-      yOffset = lerp(sin(normX + wavePhase), (abs(((normX + wavePhase) % TWO_PI) - PI) / PI) * 2 - 1, t);
-    } else if (waveShapeValue > 0.5 && waveShapeValue <= 1.0) {
-      yOffset = (abs(((normX + wavePhase) % TWO_PI) - PI) / PI) * 2 - 1;
-    } else if (waveShapeValue > 1.0 && waveShapeValue < 3.0) {
-      float t = map(waveShapeValue, 1.0f, 3.0f, 0f, 1f);
-      yOffset = lerp((abs(((normX + wavePhase) % TWO_PI) - PI) / PI) * 2 - 1, (((normX + wavePhase) % TWO_PI) / PI) - 1f, t);
-    } else if (waveShapeValue == 3.0) {
-      yOffset = (sin(normX + wavePhase) >= 0) ? 0.7f : -0.7f;
-    }
-    
-    float py = (waveCanvasY + waveCanvasH/2) + (yOffset * (waveCanvasH/2 - 6));
-    vertex(waveCanvasX + x, py);
+    if (waveShapeValue <= 1.0) yOffset = lerp(sineWave, triWave, waveShapeValue);
+    else if (waveShapeValue <= 2.0) yOffset = lerp(triWave, sawWave, waveShapeValue - 1.0f);
+    else yOffset = lerp(sawWave, sqWave, waveShapeValue - 2.0f);
+    vertex(waveCanvasX + x, (waveCanvasY + waveCanvasH/2) + (constrain(yOffset, -1.0f, 1.0f) * (waveCanvasH/2 - 6)));
   }
   endShape();
   wavePhase -= map(servoSpeedDelay, 100, 10, 0.04f, 0.18f); 
 }
 
 void drawTerminalDataReadouts() {
-  float tx = 835;
+  float tx = 640; 
   fill(cTextDim); textSize(14); textAlign(LEFT, TOP);
-  text("Current Angle", tx, 385);
-  text("Detected Distance", tx, 465);
-  
+  text("Current Angle", tx, 385); text("Detected Distance", tx, 465);
   fill(cNeonCyan); textSize(24);
   text(iAngle + " °", tx, 405);
-  
-  if (iDistance <= maxDistanceValue) {
-    fill(cAlertRed); 
-    text(iDistance + " cm", tx, 485);
-  } else { 
-    fill(cTextDim); 
-    text("Scanning...", tx, 485); 
-  }
+  if (iDistance <= maxDistanceValue) { fill(cAlertRed); text(iDistance + " cm", tx, 485); } 
+  else { fill(cTextDim); text("Scanning...", tx, 485); }
 }
 
 void drawDropdownSelectionBox(float x, float y, String label, String value, boolean isOpen) {
-  fill(cTextDim);   textSize(13); textAlign(LEFT, BOTTOM);
-  text(label, x, y - 6);
-  
-  stroke(isOpen ? cNeonCyan : cBorder);
-  strokeWeight(1);
-  fill(cBg);
-  rect(x, y, dropW, dropH, 2);
-  
-  fill(cNeonCyan);  textAlign(RIGHT, CENTER); textSize(10);
-  text("▼", x + dropW - 12, y + dropH/2);
-  
-  fill(255);        textAlign(LEFT, CENTER);  textSize(13);
-  text(value, x + 12, y + dropH/2);
+  fill(cTextDim); textSize(13); textAlign(LEFT, BOTTOM); text(label, x, y - 6);
+  stroke(isOpen ? cNeonCyan : cBorder); strokeWeight(1); fill(cBg); rect(x, y, dropW, dropH, 2);
+  fill(cNeonCyan); textAlign(RIGHT, CENTER); textSize(10); text("▼", x + dropW - 12, y + dropH/2);
+  fill(255); textAlign(LEFT, CENTER); textSize(13); text(value, x + 12, y + dropH/2);
 }
 
 void updateAndDrawSlider(float x, float y, float currentVal, float minVal, float maxVal, String label, String unit, boolean isDragging) {
   if (isDragging) {
     float handleX = constrain(mouseX, x, x + sliderW);
     float rawValue = map(handleX, x, x + sliderW, minVal, maxVal);
-    
-    if (label.equals("Waveform Selection")) {
-      waveShapeValue = round(rawValue * 10.0f) / 10.0f;
-      if (waveShapeValue != lastSentWave && myPort != null) { myPort.write("W" + waveShapeValue + "\n"); lastSentWave = waveShapeValue; }
-    } else if (label.equals("Servo Rotation Speed")) {
+    if (label.equals("Waveform Selection")) waveShapeValue = round(rawValue * 10.0f) / 10.0f;
+    else if (label.equals("Reverb Mix")) reverbMixValue = round(rawValue);
+    else if (label.equals("Reverb Decay")) reverbDecayValue = round(rawValue * 10.0f) / 10.0f;
+    else if (label.equals("Servo Rotation Speed")) {
       servoSpeedDelay = int(map(round(rawValue), 10, 100, 100, 10));
       if (servoSpeedDelay != lastSentSpeed && myPort != null) { myPort.write("S" + servoSpeedDelay + "\n"); lastSentSpeed = servoSpeedDelay; }
-    } else if (label.equals("Max Range Limit")) { maxDistanceValue = rawValue; }
-    else if (label.equals("Distance Gap Threshold")) { distGapThresh = rawValue; }
-    else if (label.equals("Angle Gap Threshold")) { angleGapThresh = rawValue; }
-    else if (label.equals("Detection Time Threshold")) { detectionTimeThresh = rawValue; }
+    } else if (label.equals("Max Range Limit")) maxDistanceValue = rawValue;
+    else if (label.equals("Detection Sample Threshold")) detectionSampleThresh = round(rawValue);
+    checkAndSendUIUpdates();
   }
-  
-  float mappedX = 0;
-  if (label.equals("Waveform Selection")) mappedX = map(waveShapeValue, minVal, maxVal, x, x + sliderW);
-  else if (label.equals("Servo Rotation Speed")) mappedX = map(int(map(servoSpeedDelay, 100, 10, 10, 100)), minVal, maxVal, x, x + sliderW);
-  else if (label.equals("Max Range Limit")) mappedX = map(maxDistanceValue, minVal, maxVal, x, x + sliderW);
-  else if (label.equals("Distance Gap Threshold")) mappedX = map(distGapThresh, minVal, maxVal, x, x + sliderW);
-  else if (label.equals("Angle Gap Threshold")) mappedX = map(angleGapThresh, minVal, maxVal, x, x + sliderW);
-  else if (label.equals("Detection Time Threshold")) mappedX = map(detectionTimeThresh, minVal, maxVal, x, x + sliderW);
-
+  float mappedX = map(currentVal, minVal, maxVal, x, x + sliderW);
   fill(cTextDim); textSize(13); textAlign(LEFT, BOTTOM);
-  text(label, x, y - 6);
-  
-  stroke(cBorder); strokeWeight(2);
-  line(x, y, x + sliderW, y);
-  stroke(cNeonCyan);
+  String valStr = (label.equals("Detection Sample Threshold") || label.equals("Reverb Mix") || label.equals("Servo Rotation Speed")) ? str(int(currentVal)) : nf(currentVal, 0, 1);
+  text(label + "  [ " + valStr + (unit.equals("") ? "" : " " + unit) + " ]", x, y - 6);
+  stroke(cBorder); strokeWeight(2); line(x, y, x + sliderW, y);
+  stroke((label.equals("Detection Sample Threshold") && !sampleThreshActive) ? cBorder : cNeonCyan);
   line(x, y, mappedX, y);
-  
-  noStroke(); fill(cNeonCyan);
-  ellipse(mappedX, y, 12, 12);
-}
-
-void drawBellSwitch() {
-  float switchX = xRightCol + sliderW + 20;
-  float switchY = yWaveformSlider - 10;
-  float swW = 80; float swH = 24;
-  
-  fill(cTextDim); textSize(13); textAlign(LEFT, BOTTOM);
-  text("Bell Switch", switchX, switchY - 6);
-  
-  stroke(bellSwitchActive ? cNeonCyan : cBorder);
-  fill(bellSwitchActive ? cRadarLine : cBg);
-  rect(switchX, switchY, swW, swH, 4);
-  
-  fill(bellSwitchActive ? cNeonCyan : cTextDim);
-  textSize(11); textAlign(CENTER, CENTER);
-  text(bellSwitchActive ? "ACTIVE" : "OFF", switchX + swW/2, switchY + swH/2);
+  noStroke(); fill(cNeonCyan); ellipse(mappedX, y, 12, 12);
 }
 
 void renderDropdownListOverlays() {
-  if (angleMenuOpen) drawExpandedOptionsList(xLeftCol, yAngleDrop, true);
-  if (distMenuOpen)  drawExpandedOptionsList(xLeftCol, yDistDrop, false);
+  if (angleMenuOpen) drawExpandedOptionsList(xLeftCol, yAngleDrop, getCurrentParams());
+  if (distMenuOpen) drawExpandedOptionsList(xLeftCol, yDistDrop, getCurrentParams());
+  if (soundMenuOpen) drawExpandedOptionsList(xRightCol, ySoundDrop, soundOptions);
 }
 
-void drawExpandedOptionsList(float x, float y, boolean isAngleMenu) {
+void drawExpandedOptionsList(float x, float y, String[] optionsList) {
   pushMatrix();
-  for (int i = 0; i < parameters.length; i++) {
+  for (int i = 0; i < optionsList.length; i++) {
     float itemY = y + dropH + (i * dropH);
-    if (mouseX >= x && mouseX <= x + dropW && mouseY >= itemY && mouseY <= itemY + dropH) {
-      fill(cRadarLine); stroke(cNeonCyan);
-    } else {
-      fill(cMenuBg); stroke(cBorder);
-    }
+    if (mouseX >= x && mouseX <= x + dropW && mouseY >= itemY && mouseY <= itemY + dropH) { fill(cRadarLine); stroke(cNeonCyan); } 
+    else { fill(cMenuBg); stroke(cBorder); }
     rect(x, itemY, dropW, dropH);
-    fill(255); textSize(12); textAlign(LEFT, CENTER);
-    text(parameters[i], x + 12, itemY + dropH/2);
+    fill(255); textSize(12); textAlign(LEFT, CENTER); text(optionsList[i], x + 12, itemY + dropH/2);
   }
   popMatrix();
 }
 
-// ---- MOUSE INTERACTION ----
 void mousePressed() {
   if (mouseX >= xRightCol && mouseX <= xRightCol + sliderW && mouseY >= yMaxDistSlider - 10 && mouseY <= yMaxDistSlider + 10) dragMaxDist = true;
   if (mouseX >= xRightCol && mouseX <= xRightCol + sliderW && mouseY >= yServoSpeed - 10 && mouseY <= yServoSpeed + 10) dragSpeed = true;
-  if (mouseX >= xRightCol && mouseX <= xRightCol + sliderW && mouseY >= yWaveformSlider - 10 && mouseY <= yWaveformSlider + 10) dragWave = true;
-  
-  if (mouseX >= xLeftCol && mouseX <= xLeftCol + sliderW && mouseY >= yThreshSliders - 10 && mouseY <= yThreshSliders + 10) dragDistG = true;
-  if (mouseX >= xLeftCol && mouseX <= xLeftCol + sliderW && mouseY >= yThreshSliders + 65 && mouseY <= yThreshSliders + 85) dragAngleG = true;
-  if (mouseX >= xLeftCol && mouseX <= xLeftCol + sliderW && mouseY >= yThreshSliders + 140 && mouseY <= yThreshSliders + 160) dragTimeG = true;
-
-  float switchX = xRightCol + sliderW + 20; float switchY = yWaveformSlider - 10;
-  if (mouseX >= switchX && mouseX <= switchX + 80 && mouseY >= switchY && mouseY <= switchY + 24) {
-    bellSwitchActive = !bellSwitchActive;
-    return;
+  if (soundRouteIndex == 0) {
+    if (mouseX >= xRightCol && mouseX <= xRightCol + sliderW && mouseY >= yDynSlider1 - 10 && mouseY <= yDynSlider1 + 10) dragDyn1 = true;
+  } else {
+    if (mouseX >= xRightCol && mouseX <= xRightCol + sliderW && mouseY >= yDynSlider1 - 10 && mouseY <= yDynSlider1 + 10) dragDyn1 = true;
+    if (mouseX >= xRightCol && mouseX <= xRightCol + sliderW && mouseY >= yDynSlider2 - 10 && mouseY <= yDynSlider2 + 10) dragDyn2 = true;
   }
-
-  if (angleMenuOpen) {
-    for (int i = 0; i < parameters.length; i++) {
-      float itemY = yAngleDrop + dropH + (i * dropH);
-      if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= itemY && mouseY <= itemY + dropH) {
-        angleRouteIndex = i; angleMenuOpen = false;
-        if (myPort != null) myPort.write("A" + angleRouteIndex + "\n"); return;
+  if (mouseX >= xLeftCol && mouseX <= xLeftCol + sliderW && mouseY >= ySampleSlider - 10 && mouseY <= ySampleSlider + 10) dragSample = true;
+  if (mouseX >= xLeftCol && mouseX <= xLeftCol + 80 && mouseY >= ySampleSwitch && mouseY <= ySampleSwitch + 24) { sampleThreshActive = !sampleThreshActive; checkAndSendUIUpdates(); return; }
+  if (soundMenuOpen) {
+    for (int i = 0; i < soundOptions.length; i++) {
+      float itemY = ySoundDrop + dropH + (i * dropH);
+      if (mouseX >= xRightCol && mouseX <= xRightCol + dropW && mouseY >= itemY && mouseY <= itemY + dropH) {
+        soundRouteIndex = i; soundMenuOpen = false; if (angleRouteIndex >= getCurrentParams().length) angleRouteIndex = 0; if (distRouteIndex >= getCurrentParams().length) distRouteIndex = 0; checkAndSendUIUpdates(); return;
       }
+    }
+    soundMenuOpen = false; return;
+  }
+  if (angleMenuOpen) {
+    String[] currentP = getCurrentParams();
+    for (int i = 0; i < currentP.length; i++) {
+      float itemY = yAngleDrop + dropH + (i * dropH);
+      if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= itemY && mouseY <= itemY + dropH) { angleRouteIndex = i; angleMenuOpen = false; checkAndSendUIUpdates(); return; }
     }
     angleMenuOpen = false; return;
   }
-  
   if (distMenuOpen) {
-    for (int i = 0; i < parameters.length; i++) {
+    String[] currentP = getCurrentParams();
+    for (int i = 0; i < currentP.length; i++) {
       float itemY = yDistDrop + dropH + (i * dropH);
-      if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= itemY && mouseY <= itemY + dropH) {
-        distRouteIndex = i; distMenuOpen = false;
-        if (myPort != null) myPort.write("D" + distRouteIndex + "\n"); return;
-      }
+      if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= itemY && mouseY <= itemY + dropH) { distRouteIndex = i; distMenuOpen = false; checkAndSendUIUpdates(); return; }
     }
     distMenuOpen = false; return;
   }
-
-  if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= yAngleDrop && mouseY <= yAngleDrop + dropH) { angleMenuOpen = true; distMenuOpen = false; return; }
-  if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= yDistDrop && mouseY <= yDistDrop + dropH) { distMenuOpen = true; angleMenuOpen = false; return; }
+  if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= yAngleDrop && mouseY <= yAngleDrop + dropH) { angleMenuOpen = true; distMenuOpen = false; soundMenuOpen = false; return; }
+  if (mouseX >= xLeftCol && mouseX <= xLeftCol + dropW && mouseY >= yDistDrop && mouseY <= yDistDrop + dropH) { distMenuOpen = true; angleMenuOpen = false; soundMenuOpen = false; return; }
+  if (mouseX >= xRightCol && mouseX <= xRightCol + dropW && mouseY >= ySoundDrop && mouseY <= ySoundDrop + dropH) { soundMenuOpen = true; angleMenuOpen = false; distMenuOpen = false; return; }
 }
 
 void mouseReleased() {
-  dragMaxDist = false; dragSpeed = false; dragWave = false;
-  dragDistG = false;   dragAngleG = false; dragTimeG = false;
+  dragMaxDist = false; dragSpeed = false; dragDyn1 = false; dragDyn2 = false; dragSample = false; 
 }
