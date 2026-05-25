@@ -37,8 +37,12 @@ private:
     // log window for UI
     juce::TextEditor logWindow;
 
+	juce::String instrumentSelected = "waves";
 	juce::String triggerAddress = "/juce/triggerNote";
 	juce::String instrumentSliderAddress = "/juce/slider";
+
+    int angleParameter = 0;
+    int distanceParameter = 1;
 
     void logMessage(const juce::String& message) override;
 

@@ -6,9 +6,23 @@ I need the following values sent, whenever they change:
 - the parameter connected to the distance
 
 
-
-
 TODO:
 Implement functionality do make angle and distance do different stuff
 Implement detection time threshold.
 Properly implement reverb for bell.
+
+
+
+Options for waves:
+Freq 110 - 220
+Sustain 6-60 
+Release 0.8-30
+Amplitude
+
+
+Options for bells:
+Freq 220 - 440
+mRatio 1-12
+mLevel 1-10
+Release 0.8-70
+detune 0-5

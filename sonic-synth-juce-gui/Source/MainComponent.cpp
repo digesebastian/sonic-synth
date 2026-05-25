@@ -99,10 +99,12 @@ void MainComponent::changeInstrument(const juce::String& newInstrument)
 	if (newInstrument == "waves") {
 		triggerAddress = "/juce/triggerNote";
 		instrumentSliderAddress = "/juce/slider";
+		instrumentSelected = "waves";
 	}
 	else if (newInstrument == "bells") {
 		triggerAddress = "/juce/triggerBell";
 		instrumentSliderAddress = "/juce/reverb";
+		instrumentSelected = "bells";
 	}
 	else {
 		LOG_WARN("Attempted to change to unrecognized instrument: " + newInstrument);

@@ -10,6 +10,8 @@
       <FILE id="O1eUIH" name="SoundSource.h" compile="0" resource="0" file="Source/SoundSource.h"/>
       <FILE id="O46wd3" name="SoundSourceDetector.h" compile="0" resource="0"
             file="Source/SoundSourceDetector.h"/>
+      <FILE id="CiSPcj" name="SonarParameters.h" compile="0" resource="0"
+            file="Source/SonarParameters.h"/>
       <FILE id="uQ2JVO" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="v9ppa0" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="ijJ4ki" name="MainComponent.cpp" compile="1" resource="0"
