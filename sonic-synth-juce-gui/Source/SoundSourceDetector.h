@@ -12,16 +12,6 @@
 
 #include "SoundSource.h"
 
-namespace defaultValues
-{
-	constexpr int maxDistance = 100;
-	constexpr int minFreq = 440;
-	constexpr int maxFreq = 880;
-    constexpr int minAngle = 0;
-    constexpr int maxAngle = 180;
-
-}
-
 class SoundSourceDetector
 {
 public:
@@ -37,9 +27,7 @@ public:
 
 private:
     bool currentlyScanningSource = false;
-	float maxDistance = defaultValues::maxDistance;
-
-    int computeFreq(const int& angle);
+	float maxDistance = 100.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SoundSourceDetector)
 };

@@ -13,5 +13,6 @@
 
 struct SoundSource
 {
-   int freq;
+    float param1;
+	float param2;
 };

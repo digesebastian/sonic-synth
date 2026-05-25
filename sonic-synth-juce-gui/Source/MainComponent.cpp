@@ -1,6 +1,7 @@
 #include "MainComponent.h"
 #include "Logging.h"
 #include "SoundSource.h"
+#include "SonarParameters.h"
 
 //==============================================================================
 MainComponent::MainComponent()
@@ -53,14 +54,29 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 			{
 				return; // no new sound source detected, so we can exit early
 			}
-			SoundSource newSource = potentialSource.value();
-			int newFreq = newSource.freq;
+
+			minMaxParam angleParam;
+			minMaxParam distanceParam;
+			if (instrumentSelected == "waves") {
+				angleParam = instrumentParams::waveParams[angleParameter];
+				distanceParam = instrumentParams::waveParams[distanceParameter];
+			}
+			else {
+				angleParam = instrumentParams::bellParams[angleParameter];
+				distanceParam = instrumentParams::bellParams[distanceParameter];
+			}
+
+			float param1Val = calculateParameterValue(angleParam, message[0].getInt32(), defaultValues::minAngle, defaultValues::maxAngle);
+			float param2Val = calculateParameterValue(distanceParam, message[1].getInt32(), defaultValues::minDistance, defaultValues::maxDistance);
 
 			juce::OSCMessage messageToSend(triggerAddress);
-			messageToSend.addArgument(juce::String("freq"));
-			messageToSend.addArgument(newFreq);
+			messageToSend.addArgument(angleParam.name);
+			messageToSend.addArgument(param1Val);
+			messageToSend.addArgument(distanceParam.name);
+			messageToSend.addArgument(param2Val);
 
 			oscSender.send(messageToSend);
+			LOG_INFO("Sent OSC message with values: " + angleParam.name + " " + juce::String(param1Val) + ", " + distanceParam.name + " " + juce::String(param2Val));
 		}
 		else {
 			LOG_WARN("Received an unexpected number of arguments: " + message.size());
@@ -84,7 +100,7 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 	else if (address == "/maxDistanceSlider") {
 		float newMaxDistance = message[0].getFloat32();
 		LOG_INFO("Received max distance slider OSC message with value: " + juce::String(newMaxDistance));
-		detector.setMaxDistance(newMaxDistance);
+		maxDistance = newMaxDistance;
 	}
 	else if (address == "/instrumentChange") {
 		changeInstrument(message[0].getString());
@@ -109,6 +125,15 @@ void MainComponent::changeInstrument(const juce::String& newInstrument)
 	else {
 		LOG_WARN("Attempted to change to unrecognized instrument: " + newInstrument);
 	}
+}
+
+float MainComponent::calculateParameterValue(minMaxParam parameter, int sonarValue, float minSonarVal, float maxSonarVal)
+{
+	// map the sonar value to a 0-1 range based on the expected min and max sonar values
+	float normalizedValue = (sonarValue - minSonarVal) / (maxSonarVal - minSonarVal);
+	// scale and shift the normalized value to fit within the parameter's expected range
+	float scaledValue = parameter.min + normalizedValue * (parameter.max - parameter.min);
+	return scaledValue;
 }
 
 //==============================================================================

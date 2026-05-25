@@ -7,7 +7,6 @@ I need the following values sent, whenever they change:
 
 
 TODO:
-Implement functionality do make angle and distance do different stuff
 Implement detection time threshold.
 Properly implement reverb for bell.
 
