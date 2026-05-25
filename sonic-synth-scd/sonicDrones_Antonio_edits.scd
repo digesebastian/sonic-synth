@@ -217,15 +217,15 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 // Create a fake "JUCE" network address pointing at SuperCollider's own port
 ~fakeJuce = NetAddr("127.0.0.1", NetAddr.langPort);
 
-// 1. Simulate JUCE triggering a bell!
+//bell tests
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \iScale, 4, \rel, 0.5);
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \iScale, 15, \rel, 1.2, \pan, -0.8);
 
-// 2. Simulate JUCE turning up the Reverb Mix and Room Size (t60)
+//large reverb
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
 
-// Hit a bell again to hear the massive new reverb!
+//higher bell
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \iScale, 3);
 
-// Bring the reverb back down
+//lower mix
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.2, \t60, 1.0);

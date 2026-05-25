@@ -119,7 +119,7 @@ SynthDef(\jp_reverb, {
 (
 ~activeDrones = Dictionary.new; //setup
 ~bellBus = Bus.audio(s, 2); //bus for bells
-~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~bellBus, \out, 0, \mix, 0.5, \t60, 2]);
+~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~bellBus, \out, 0, \mix, 0.5, \t60, 2]); //global reverb variable
 
 // LISTENER 1: Handles incoming Note Triggers with Key-Value pairs
 OSCdef.new(\noteTriggerListener, { |msg|
@@ -174,12 +174,28 @@ OSCdef.new(\reverbTrigger, {|msg|
 	var reverbArgs;
 
 	reverbArgs = msg.drop(1);
-	if (~globalReverb.notNil) {
-		~globalReverb.set(*reverbArgs);
+	if (~reverbOut.notNil) {
+		~reverbOut.set(*reverbArgs);
 		("Updated reverb with args: " ++ reverbArgs).postln;
 	};
 
 }, '/juce/reverb');
+
+//Bell+Reverb Combo
+OSCdef.new(\bellReverbComboTrigger, { |msg|
+	var comboArgs;
+
+	comboArgs = msg.drop(1);
+	if (~reverbOut.notNil) {
+		~reverbOut.set(*comboArgs);
+	};
+
+	Synth(\fm_2, comboArgs ++ [\out, ~bellBus]);
+
+	("Bells and Reverb triggered with args: " ++ comboArgs).postln;
+
+
+}, '/juce/combo');
 
 
 "--- SMART KEY-VALUE ENGINE ACTIVE: Waiting for JUCE ---".postln;
@@ -218,15 +234,18 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 // Create a fake "JUCE" network address pointing at SuperCollider's own port
 ~fakeJuce = NetAddr("127.0.0.1", NetAddr.langPort);
 
-// 1. Simulate JUCE triggering a bell!
+//bell tests
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \iScale, 4, \rel, 0.5);
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \iScale, 15, \rel, 1.2, \pan, -0.8);
 
-// 2. Simulate JUCE turning up the Reverb Mix and Room Size (t60)
+//large reverb
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
 
-// Hit a bell again to hear the massive new reverb!
+//higher bell
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \iScale, 3);
 
-// Bring the reverb back down
+//lower mix
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.2, \t60, 1.0);
+
+//test combo
+~fakeJuce.sendMsg('/juce/combo', \freq, 800, \iScale, 8, \mix, 0.9, \t60, 6.0);
