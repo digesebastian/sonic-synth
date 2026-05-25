@@ -89,7 +89,7 @@ SynthDef(\fm_2, {
 
 //suggested reverb parameters to change: t60 (decay time), size
 SynthDef(\jp_reverb, {
-	arg in, t60=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, mix=0.5;
+	arg in, t60=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, reverbMix=0.5;
 	var snd, dry, wet;
 
 	snd = In.ar(in, 2);
@@ -106,9 +106,26 @@ SynthDef(\jp_reverb, {
 
 	//mix
 	//snd = wet + dry;
-	snd = XFade2.ar(dry, wet, (mix * 2) - 1);
+	snd = XFade2.ar(dry, wet, (reverbMix * 2) - 1);
 	snd = snd * -15.dbamp;
 	Out.ar(out,snd);
+}).add;
+
+SynthDef(\tape_delay, {
+	//delayTime -> 0.01-2
+	arg in, out=0, delayTime=0.3, fdbk=0.6, delayMix=0.4;
+	var dry, wet, local;
+
+	dry = In.ar(in, 2); //setup input
+	local = LocalIn.ar(2) + dry; //setup feedback loop
+
+	wet = DelayC.ar(local, 2.0, delayTime);
+
+
+
+	LocalOut.ar(wet * fdbk);
+	Out.ar(out, XFade2.ar(dry, wet, (delayMix * 2) - 1));
+
 }).add;
 
 )
@@ -119,7 +136,9 @@ SynthDef(\jp_reverb, {
 (
 ~activeDrones = Dictionary.new; //setup
 ~bellBus = Bus.audio(s, 2); //bus for bells
-~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~bellBus, \out, 0, \mix, 0.5, \t60, 2]); //global reverb variable
+~reverbBus = Bus.audio(s, 2); //bus for Delay to Reverb
+~delayOut = Synth.tail(s, \tape_delay, [\in, ~bellBus, \out, ~reverbBus, \delayMix, 0.4]);
+~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~reverbBus, \out, 0, \reverbMix, 0.5, \t60, 2]); //global reverb variable
 
 // LISTENER 1: Handles incoming Note Triggers with Key-Value pairs
 OSCdef.new(\noteTriggerListener, { |msg|
@@ -181,6 +200,17 @@ OSCdef.new(\reverbTrigger, {|msg|
 
 }, '/juce/reverb');
 
+//Delay Listener
+OSCdef.new(\delayTrigger, {|msg|
+	var delayArgs;
+
+	delayArgs = msg.drop(1);
+	if (~delayOut.notNil) {
+		~delayOut.set(*delayArgs);
+		("Delay updated with args: " ++ delayArgs).postln;
+	};
+}, '/juce/delay');
+
 //Bell+Reverb Combo
 OSCdef.new(\bellReverbComboTrigger, { |msg|
 	var comboArgs;
@@ -188,6 +218,10 @@ OSCdef.new(\bellReverbComboTrigger, { |msg|
 	comboArgs = msg.drop(1);
 	if (~reverbOut.notNil) {
 		~reverbOut.set(*comboArgs);
+	};
+
+	if (~delayOut.notNil) {
+		~delayOut.set(*comboArgs);
 	};
 
 	Synth(\fm_2, comboArgs ++ [\out, ~bellBus]);
@@ -240,13 +274,16 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \mLevel, 10, \rel, 1.2);
 
 //large reverb
-~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
+~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.9, \t60, 8.0);
 
 //higher bell
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \mLevel, 3);
 
 //lower mix
-~fakeJuce.sendMsg('/juce/reverb', \mix, 0.2, \t60, 1.0);
+~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.2, \t60, 1.0);
 
 //test combo
-~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \mix, 0.5, \t60, 1.0);
+~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \reverbMix, 0.5, \t60, 1.0);
+
+//test new combo
+~fakeJuce.sendMsg('/juce/combo', \freq, 330, \delayTime, 0.7, \feedback, 0.4, \delayMix, 0.7, \t60, 4.0);
