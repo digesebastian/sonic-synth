@@ -28,7 +28,6 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 			LOG_INFO("New sound source detected at angle: " + juce::String(angle) + " and distance: " + juce::String(distance));
 			currentlyScanningSource = true;
 			SoundSource newSource;
-			newSource.freq = angle;
 
 			return newSource;
 		}
@@ -38,7 +37,9 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 	}
 	else
 	{
-		LOG_INFO("Not detecting sound source");
+		if (currentlyScanningSource) {
+			LOG_INFO("No longer detecting sound source");
+		}
 		currentlyScanningSource = false;
 	}
     

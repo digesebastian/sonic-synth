@@ -13,5 +13,4 @@
 
 struct SoundSource
 {
-   int freq;
 };
