@@ -102,20 +102,26 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 		LOG_INFO("Received bell mix slider OSC message with value: " + juce::String(sliderValue));
 
 		juce::OSCMessage messageToSend("/juce/reverb");
+		messageToSend.addArgument(juce::String("reverbMix"));
 		messageToSend.addArgument(sliderValue);
 
 		oscSender.send(messageToSend);
-		// TODO
-		// 0-1
 	}
 	else if (address == "/reverb/decay") {
-		// TODO
-		// 0-10
+		float sliderValue = message[0].getFloat32();
+		LOG_INFO("Received bell decay slider OSC message with value: " + juce::String(sliderValue));
+
+		juce::OSCMessage messageToSend("/juce/reverb");
+		messageToSend.addArgument(juce::String("reverbDecay"));
+		messageToSend.addArgument(sliderValue);
+
+		oscSender.send(messageToSend);
 	}
 	else if (address == "/max_dist") {
 		float newMaxDistance = message[0].getFloat32();
 		LOG_INFO("Received max distance slider OSC message with value: " + juce::String(newMaxDistance));
 		maxDistance = newMaxDistance;
+		detector.setMaxDistance(maxDistance);
 	}
 	else if (address == "/instrument") {
 		LOG_INFO("Received instrument change OSC message with value: " + message[0].getInt32());

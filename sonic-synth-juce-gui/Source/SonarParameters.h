@@ -29,7 +29,7 @@ namespace instrumentParams {
         minMaxParam{"freq", 220.0f, 440.0f},
         minMaxParam{"mRatio", 1.0f, 12.0f},
         minMaxParam{"mLevel", 1.0f, 10.0f},
-        minMaxParam{"rel", 0.8f, 70.0f},
+        minMaxParam{"rel", 0.8f, 30.0f},
         minMaxParam{"detune", 0.0f, 5.0f}
     };
 }
