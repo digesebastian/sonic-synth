@@ -70,7 +70,7 @@ SynthDef(\fm_2, {
 
 	//amplitude envelope
 	env = EnvGen.kr(Env.perc(atk, rel,curve:[cAtk, cRel]), doneAction:2);
-	detunedVoices = [-2, -1, 0, 1, 2] * detune; //initialize 5 voice unison detune
+	detunedVoices = [-2, -1, 0, 1, 2] * detune; //initialize 5 voice unison detune with frequency offset value for each voice multiplied by detune amount
 
 	//modulator carrier
 	mod = SinOsc.ar(freq * mRatio, mul:freq * mRatio * iEnv);
@@ -236,8 +236,8 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 
 //bell tests
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 800, \mLevel, 4, \rel, 0.5);
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 440, \mLevel, 4, \rel, 0.5, \mRatio, 10);
-~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \mLevel, 10, \rel, 1.2, \pan, -0.8);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 220, \mLevel, 4, \rel, 1, \mRatio, 10, \detune, 1.5, \spread, 10);
+~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \mLevel, 10, \rel, 1.2);
 
 //large reverb
 ~fakeJuce.sendMsg('/juce/reverb', \mix, 0.9, \t60, 8.0);
