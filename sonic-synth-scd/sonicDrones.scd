@@ -87,9 +87,9 @@ SynthDef(\fm_2, {
 
 }).add;
 
-//suggested reverb parameters to change: t60 (decay time), size
+//suggested reverb parameters to change: reverbDecay (decay time), size
 SynthDef(\jp_reverb, {
-	arg in, t60=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, reverbMix=0.5;
+	arg in, reverbDecay=2, out=0, roomsize=1.0, damp=0.1, size = 2.5, reverbMix=0.5;
 	var snd, dry, wet;
 
 	snd = In.ar(in, 2);
@@ -97,7 +97,7 @@ SynthDef(\jp_reverb, {
 
 	wet = JPverb.ar(
 		snd.sum,
-		t60: t60,
+		reverbDecay: reverbDecay,
 		size: roomsize,
 		damp: damp,
 		modDepth: 0.7,
@@ -138,7 +138,7 @@ SynthDef(\tape_delay, {
 ~bellBus = Bus.audio(s, 2); //bus for bells
 ~reverbBus = Bus.audio(s, 2); //bus for Delay to Reverb
 ~delayOut = Synth.tail(s, \tape_delay, [\in, ~bellBus, \out, ~reverbBus, \delayMix, 0.4]);
-~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~reverbBus, \out, 0, \reverbMix, 0.5, \t60, 2]); //global reverb variable
+~reverbOut = Synth.tail(s, \jp_reverb, [\in, ~reverbBus, \out, 0, \reverbMix, 0.5, \reverbDecay, 2]); //global reverb variable
 
 // LISTENER 1: Handles incoming Note Triggers with Key-Value pairs
 OSCdef.new(\noteTriggerListener, { |msg|
@@ -274,16 +274,16 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 400, \mLevel, 10, \rel, 1.2);
 
 //large reverb
-~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.9, \t60, 8.0);
+~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.9, \reverbDecay, 8.0);
 
 //higher bell
 ~fakeJuce.sendMsg('/juce/triggerBell', \freq, 1200, \mLevel, 3);
 
 //lower mix
-~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.2, \t60, 1.0);
+~fakeJuce.sendMsg('/juce/reverb', \reverbMix, 0.2, \reverbDecay, 1.0);
 
 //test combo
-~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \reverbMix, 0.5, \t60, 1.0);
+~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \reverbMix, 0.5, \reverbDecay, 1.0);
 
 //test new combo
-~fakeJuce.sendMsg('/juce/combo', \freq, 330, \delayTime, 0.7, \feedback, 0.4, \delayMix, 0.7, \t60, 4.0);
+~fakeJuce.sendMsg('/juce/combo', \freq, 330, \delayTime, 0.7, \feedback, 0.4, \delayMix, 0.7, \reverbDecay, 4.0);
