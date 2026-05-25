@@ -97,7 +97,7 @@ SynthDef(\jp_reverb, {
 
 	wet = JPverb.ar(
 		snd.sum,
-		reverbDecay: reverbDecay,
+		t60: reverbDecay,
 		size: roomsize,
 		damp: damp,
 		modDepth: 0.7,
@@ -286,4 +286,4 @@ Synth(\juceDrone, [\freq, 110, \atk, 4, \sus, 6, \rel, 6, \waveShape, 3, \amp, 0
 ~fakeJuce.sendMsg('/juce/combo', \freq, 800, \mLevel, 8, \reverbMix, 0.5, \reverbDecay, 1.0);
 
 //test new combo
-~fakeJuce.sendMsg('/juce/combo', \freq, 330, \delayTime, 0.7, \feedback, 0.4, \delayMix, 0.7, \reverbDecay, 4.0);
+~fakeJuce.sendMsg('/juce/combo', \freq, 330, \delayTime, 0.7, \feedback, 0.4, \delayMix, 0.7, \reverbDecay, 1.0);
