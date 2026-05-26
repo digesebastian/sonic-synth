@@ -5,7 +5,8 @@ import netP5.*;
 Serial myPort;
 OscP5 oscP5;          
 NetAddress myRemoteLocation; 
-
+int lastDistance = 999;
+int distanceThreshold = 20; // cm - adjust this!
 // ---- TELEMETRY & DATA ----
 int iAngle = 0;
 int iDistance = 999;
@@ -133,7 +134,7 @@ void draw() {
   fill(cNeonCyan);
   textSize(18);
   textAlign(LEFT, TOP);
-  text("N_Tech Acoustic Radar System", xLeftCol, 35);
+  text("Sonic Synth", xLeftCol, 35);
   
   drawDropdownSelectionBox(xLeftCol, yAngleDrop, "Angle Mapping", getCurrentParams()[angleRouteIndex], angleMenuOpen);
   drawDropdownSelectionBox(xLeftCol, yDistDrop, "Distance Mapping", getCurrentParams()[distRouteIndex], distMenuOpen);
@@ -167,30 +168,52 @@ void draw() {
   renderDropdownListOverlays();
 }
 
-void serialEvent (Serial myPort) { 
-  String data = myPort.readStringUntil('.');
-  if (data != null && data.length() > 2) {
+void serialEvent(Serial myPort) { 
+  // 1. Read until the '.' terminator sent by Arduino
+  String data = myPort.readStringUntil('.'); 
+  
+  if (data != null) {
+    // 2. Trim the dot and whitespace
     data = data.substring(0, data.length()-1).trim();
-    int splitIndex = data.indexOf(","); 
-    if (splitIndex > 0) {
+    
+    // 3. Split the "angle,distance" string
+    String[] parts = split(data, ',');
+    
+    if (parts.length == 2) {
       try {
-        int tempAngle = int(data.substring(0, splitIndex).trim());
-        int rawDist = int(data.substring(splitIndex+1).trim());
-        if(tempAngle >= 0 && tempAngle <= 180) {
+        int tempAngle = int(parts[0]);
+        int rawDist = int(parts[1]);
+
+        // 4. Validate Angle Range
+        if (tempAngle >= 15 && tempAngle <= 165) {
           iAngle = tempAngle;
-          if (rawDist > 0 && rawDist < 400) {
+          
+          // 5. HALLUCINATION FILTER & RANGE MAPPING
+          // Only process distance if it's within physical reality (1-400cm)
+          // AND respects the user's "Max Range Limit" slider
+          if (rawDist > 0 && rawDist <= maxDistanceValue) {
+            
+            // Median Filter to kill single-ping spikes
             medianBuffer[medianIndex] = rawDist;
             medianIndex = (medianIndex + 1) % 3;
-            int[] sorted = {medianBuffer[0], medianBuffer[1], medianBuffer[2]};
-            java.util.Arrays.sort(sorted);
-            iDistance = sorted[1]; 
-            if (radarHistory[iAngle] == 999.0) radarHistory[iAngle] = iDistance; 
-            else radarHistory[iAngle] = (radarHistory[iAngle] * 0.6) + (iDistance * 0.4);
-            if (radarHistory[iAngle] <= maxDistanceValue) radarAlpha[iAngle] = 255; 
-          } else { iDistance = 999; }
-          sendSonarData(); 
+            int[] sorted = sort(medianBuffer);
+            iDistance = sorted[1];
+            
+            // Update UI History
+            radarHistory[iAngle] = iDistance;
+            radarAlpha[iAngle] = 255;
+            
+            // 6. Only send to SuperCollider if data is valid
+            sendSonarData();
+            
+          } else {
+            // Treat out-of-range/hallucinations as 999
+            iDistance = 999;
+          }
         }
-      } catch (Exception e) {}
+      } catch (Exception e) {
+        // Silently catch parsing errors to keep the UI from freezing
+      }
     }
   }
 }
@@ -198,6 +221,7 @@ void serialEvent (Serial myPort) {
 void sendSonarData() {
      OscMessage sonarMessage = new OscMessage("/sonar");
      sonarMessage.add(iAngle);
+      System.out.println("Angle" + iAngle + " and distance" + iDistance);
      sonarMessage.add(iDistance);
      oscP5.send(sonarMessage, myRemoteLocation); 
 }
