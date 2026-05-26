@@ -55,6 +55,9 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 				return; // no new sound source detected, so we can exit early
 			}
 
+			int newSourceAngle = potentialSource->angle;
+			int newSourceDistance = potentialSource->distance;
+
 			minMaxParam angleParam;
 			minMaxParam distanceParam;
 			if (instrumentSelected == "waves") {
@@ -66,8 +69,8 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 				distanceParam = instrumentParams::bellParams[distanceParameter];
 			}
 
-			float param1Val = calculateParameterValue(angleParam, message[0].getInt32(), defaultValues::minAngle, defaultValues::maxAngle);
-			float param2Val = calculateParameterValue(distanceParam, message[1].getInt32(), defaultValues::minDistance, defaultValues::maxDistance);
+			float param1Val = calculateParameterValue(angleParam, newSourceAngle, defaultValues::minAngle, defaultValues::maxAngle);
+			float param2Val = calculateParameterValue(distanceParam, newSourceDistance, defaultValues::minDistance, defaultValues::maxDistance);
 
 			juce::OSCMessage messageToSend(triggerAddress);
 			messageToSend.addArgument(angleParam.name);
@@ -143,10 +146,15 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 		distanceParameter = newDistanceParam;
 	}
 	else if (address == "/sample_skip/active") {
-		//TODO int 0-1
+		int sampleSkipActive = message[0].getInt32();
+		bool useMaxSourceSize = sampleSkipActive == 1;
+		LOG_INFO("Received sample skip active OSC message with value: " + juce::String(sampleSkipActive));
+		detector.setUseMaxSourceSize(useMaxSourceSize);
 	}
 	else if (address == "/sample_skip/count") {
-		//TODO int 10-60
+		int sampleSkipCount = message[0].getInt32();
+		LOG_INFO("Received sample skip count OSC message with value: " + juce::String(sampleSkipCount));
+		detector.setMaxSourceSize(sampleSkipCount);
 	}
 	else {
 		LOG_WARN("Received OSC message with unrecognized address pattern: " + message.getAddressPattern().toString());

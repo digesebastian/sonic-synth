@@ -7,9 +7,9 @@
 namespace defaultValues
 {
     constexpr float minDistance = 0.0f;
-    constexpr float maxDistance = 100.0f;
-    constexpr float minAngle = 0.0f;
-    constexpr float maxAngle = 180.0f;
+    constexpr float maxDistance = 200.0f;
+    constexpr float minAngle = 15.0f;
+    constexpr float maxAngle = 165.0f;
 }
 //==============================================================================
 /*
@@ -51,7 +51,7 @@ private:
 
 	float maxDistance = defaultValues::maxDistance;
 
-    int angleParameter = 0;
+    int angleParameter = 0; // is this right?
     int distanceParameter = 1;
 
     void logMessage(const juce::String& message) override;
