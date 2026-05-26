@@ -5,8 +5,7 @@ import netP5.*;
 Serial myPort;
 OscP5 oscP5;          
 NetAddress myRemoteLocation; 
-int lastDistance = 999;
-int distanceThreshold = 20; // cm - adjust this!
+
 // ---- TELEMETRY & DATA ----
 int iAngle = 0;
 int iDistance = 999;
