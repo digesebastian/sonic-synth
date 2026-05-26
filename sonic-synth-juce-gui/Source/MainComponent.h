@@ -51,7 +51,7 @@ private:
 
 	float maxDistance = defaultValues::maxDistance;
 
-    int angleParameter = 0;
+    int angleParameter = 0; // is this right?
     int distanceParameter = 1;
 
     void logMessage(const juce::String& message) override;

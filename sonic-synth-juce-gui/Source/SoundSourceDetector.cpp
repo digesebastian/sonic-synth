@@ -11,6 +11,7 @@
 #include "SoundSourceDetector.h"
 #include "Logging.h"
 
+
 SoundSourceDetector::SoundSourceDetector()
 {
 }
@@ -23,12 +24,29 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 {
 	if (distance <= maxDistance)
 	{
-		if (!currentlyScanningSource)
+		currentSourceData.push_back(std::make_tuple(angle, distance));
+		if (currentlyScanningSource)
 		{
+			int sourceSize = currentSourceData.size();
+			if (useMaxSourceSize && sourceSize > maxSourceSize)
+			{
+				SoundSource newSource{};
+				newSource.angle = std::get<0>(currentSourceData[sourceSize / 2]);
+				newSource.distance = std::get<1>(currentSourceData[sourceSize / 2]);
+
+				LOG_INFO("Max object size exceeded. Playing source of size " + juce::String(sourceSize)
+					+ " at angle " + juce::String(newSource.angle)
+					+ " and distance " + juce::String(newSource.distance));
+
+				currentSourceData.clear();
+				currentlyScanningSource = false;
+				return std::make_optional(newSource);
+			}
+		} 
+		else {
 			currentlyScanningSource = true;
 			LOG_INFO("Started detecting sound source");
 		}
-		currentSourceData.push_back(std::make_tuple(angle, distance));
 	}
 	else if (currentlyScanningSource)
 	{

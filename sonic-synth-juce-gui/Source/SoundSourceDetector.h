@@ -26,10 +26,16 @@ public:
     std::optional<SoundSource> checkForNewSource(const int& angle, const int& distance);
 
 	void setMaxDistance(const float& newMaxDistance) { maxDistance = newMaxDistance; }
+	void setUseMaxSourceSize(const bool& shouldUseMaxSourceSize) { useMaxSourceSize = shouldUseMaxSourceSize; }
+	void setMaxSourceSize(const int& newMaxSourceSize) { maxSourceSize = newMaxSourceSize; }
 
 private:
     bool currentlyScanningSource = false;
 	float maxDistance = 100.0f;
+
+    bool useMaxSourceSize = false;
+	int maxSourceSize = 15;
+
 	std::vector<std::tuple<int, int>> currentSourceData;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SoundSourceDetector);
