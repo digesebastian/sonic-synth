@@ -107,7 +107,7 @@ void setup() {
   myRemoteLocation = new NetAddress("127.0.0.1", 7000);
   
   try {
-    myPort = new Serial(this, "COM16", 9600); 
+    myPort = new Serial(this, "COM6", 9600); 
     myPort.bufferUntil('.'); 
   } catch (Exception e) {
     println("WARNING: Arduino port not found. Running UI in offline mode.");
@@ -182,6 +182,7 @@ void serialEvent(Serial myPort) {
       try {
         int tempAngle = int(parts[0]);
         int rawDist = int(parts[1]);
+        sendSonarData(tempAngle, rawDist);
 
         // 4. Validate Angle Range
         if (tempAngle >= 15 && tempAngle <= 165) {
@@ -193,18 +194,15 @@ void serialEvent(Serial myPort) {
           if (rawDist > 0 && rawDist <= maxDistanceValue) {
             
             // Median Filter to kill single-ping spikes
-            medianBuffer[medianIndex] = rawDist;
-            medianIndex = (medianIndex + 1) % 3;
-            int[] sorted = sort(medianBuffer);
-            iDistance = sorted[1];
+            //medianBuffer[medianIndex] = rawDist;
+            //medianIndex = (medianIndex + 1) % 3;
+            //int[] sorted = sort(medianBuffer);
+            //iDistance = sorted[1];
+            iDistance = rawDist;
             
             // Update UI History
             radarHistory[iAngle] = iDistance;
-            radarAlpha[iAngle] = 255;
-            
-            // 6. Only send to SuperCollider if data is valid
-            sendSonarData();
-            
+            radarAlpha[iAngle] = 255;            
           } else {
             // Treat out-of-range/hallucinations as 999
             iDistance = 999;
@@ -217,11 +215,11 @@ void serialEvent(Serial myPort) {
   }
 }
 
-void sendSonarData() {
+void sendSonarData(int angle, int distance) {
      OscMessage sonarMessage = new OscMessage("/sonar");
-     sonarMessage.add(iAngle);
-      System.out.println("Angle" + iAngle + " and distance" + iDistance);
-     sonarMessage.add(iDistance);
+     sonarMessage.add(angle);
+      System.out.println("Angle" + angle + " and distance" + distance);
+     sonarMessage.add(distance);
      oscP5.send(sonarMessage, myRemoteLocation); 
 }
 

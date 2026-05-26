@@ -45,7 +45,7 @@ std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& ang
 		} 
 		else {
 			currentlyScanningSource = true;
-			LOG_INFO("Started detecting sound source");
+			// LOG_INFO("Started detecting sound source");
 		}
 	}
 	else if (currentlyScanningSource)
