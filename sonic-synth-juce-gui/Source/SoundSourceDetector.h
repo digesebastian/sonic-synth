@@ -34,7 +34,9 @@ private:
 	float maxDistance = 100.0f;
 
     bool useMaxSourceSize = false;
-	int maxSourceSize = 15;
+	int minAngle = 15;
+	int maxAngle = 165;
+    int maxSourceSize = 15;
 
 	std::vector<std::tuple<int, int>> currentSourceData;
 

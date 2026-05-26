@@ -22,7 +22,7 @@ SoundSourceDetector::~SoundSourceDetector()
 
 std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& angle, const int& distance)
 {
-	if (distance <= maxDistance)
+	if (distance <= maxDistance && minAngle < angle && angle < maxAngle)
 	{
 		currentSourceData.push_back(std::make_tuple(angle, distance));
 		if (currentlyScanningSource)
