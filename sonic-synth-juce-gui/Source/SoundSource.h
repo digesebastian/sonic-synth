@@ -13,4 +13,6 @@
 
 struct SoundSource
 {
+    int angle;
+	int distance;
 };

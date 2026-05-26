@@ -7,8 +7,7 @@ I need the following values sent, whenever they change:
 
 
 TODO:
-Implement detection time threshold.
-Properly implement reverb for bell.
+
 
 
 

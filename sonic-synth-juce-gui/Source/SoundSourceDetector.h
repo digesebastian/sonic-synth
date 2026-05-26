@@ -11,6 +11,8 @@
 #pragma once
 
 #include "SoundSource.h"
+#include <iostream>
+#include <vector>
 
 class SoundSourceDetector
 {
@@ -28,6 +30,7 @@ public:
 private:
     bool currentlyScanningSource = false;
 	float maxDistance = 100.0f;
+	std::vector<std::tuple<int, int>> currentSourceData;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SoundSourceDetector)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SoundSourceDetector);
 };

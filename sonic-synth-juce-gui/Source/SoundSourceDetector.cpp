@@ -21,26 +21,35 @@ SoundSourceDetector::~SoundSourceDetector()
 
 std::optional<SoundSource> SoundSourceDetector::checkForNewSource(const int& angle, const int& distance)
 {
-	if (distance < maxDistance)
+	if (distance <= maxDistance)
 	{
 		if (!currentlyScanningSource)
 		{
-			LOG_INFO("New sound source detected at angle: " + juce::String(angle) + " and distance: " + juce::String(distance));
 			currentlyScanningSource = true;
-			SoundSource newSource;
-
-			return newSource;
+			LOG_INFO("Started detecting sound source");
 		}
-		else {
-			//LOG_INFO("Detected same sound source as before");
-		}
+		currentSourceData.push_back(std::make_tuple(angle, distance));
 	}
-	else
+	else if (currentlyScanningSource)
 	{
-		if (currentlyScanningSource) {
-			LOG_INFO("No longer detecting sound source");
+		int sourceSize = currentSourceData.size();
+		if (sourceSize < 4) {
+			LOG_INFO("Discarded source of size " + std::to_string(sourceSize));
+			currentSourceData.clear();
+			currentlyScanningSource = false;
+			return std::nullopt;
 		}
+		SoundSource newSource{};
+		newSource.angle = std::get<0>(currentSourceData[sourceSize / 2]);
+		newSource.distance = std::get<1>(currentSourceData[sourceSize / 2]);
+
+		LOG_INFO("Playing source of size " + juce::String(sourceSize)
+			+ " at angle " + juce::String(newSource.angle)
+			+ " and distance " + juce::String(newSource.distance));
+
+		currentSourceData.clear();
 		currentlyScanningSource = false;
+		return std::make_optional(newSource);
 	}
     
 	return std::nullopt;
